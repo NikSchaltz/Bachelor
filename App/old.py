@@ -88,6 +88,7 @@ def dbChange(query):
     else:
         cursor = db.cursor()
         cursor.execute(query)
+        db.commit()
         cursor.close()
         db.close()
 
