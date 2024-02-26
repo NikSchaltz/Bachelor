@@ -9,6 +9,9 @@ import requests
 import mysql.connector
 from mysql.connector import errorcode
 
+global userRole
+userRole = ""
+
 login = {
     'host': "bachelor-adit-nikolaj.mysql.database.azure.com",
     'user': "bachelorprojekt",
@@ -42,7 +45,7 @@ def create_buttons_of_enabled_events(
     # cleanup of previous widgets
     button_layout.clear_widgets()
 
-    userRole = mainApp.role()
+    global userRole
 
     events = []
     # distinguish between one and multiple events
@@ -125,7 +128,7 @@ class SimulationButton(Button):
         Button.__init__(self)
         self.event_id = event_id
         self.text = text
-        self.graph_id = graph_id
+        self.regraph_id = graph_id
         self.simulation_id = simulation_id
         self.username = username
         self.password = password
@@ -140,14 +143,6 @@ class SimulationButton(Button):
         req.auth = auth
         req.post(url)
 
-        """ if response.is_success:
-            # Handle the success case (e.g., update UI, show a message)
-            print("Event executed successfully!")
-        else:
-            # Handle the error case (e.g., show an error message)
-            print(f"Failed to execute event. Status code: {response.status_code}, Reason: {response.reason_phrase}") """
-
-        # Optionally, create buttons for new enabled events (similar to what you did in start_sim)
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
@@ -205,6 +200,9 @@ class MainApp(App):
         if resp_headers:
             self.simulation_id = resp_headers['simulationID']
 
+        global userRole
+        userRole = self.role()
+
         if dbSelectOne(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';") == False:
             dbChange(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');" )
         
@@ -218,6 +216,8 @@ class MainApp(App):
         if dbSelectOne(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};"):
             simID = dbSelectOne(f"SELECT SimulationID FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
             self.simulation_id = str(simID)
+            global userRole
+            userRole = self.role()
             create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
         else:
             self.start_sim(instance)

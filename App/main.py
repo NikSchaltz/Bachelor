@@ -10,7 +10,7 @@ import mysql.connector
 from mysql.connector import errorcode
 
 global userRole
-userRole = "xD"
+userRole = ""
 
 login = {
     'host': "bachelor-adit-nikolaj.mysql.database.azure.com",
@@ -76,7 +76,7 @@ def create_buttons_of_enabled_events(
                 button_layout.add_widget(s)
 
 
-def dbChange(query):
+""" def dbChange(query):
     try: 
         db = mysql.connector.connect(**login)
         print("Connected to the database")
@@ -93,10 +93,10 @@ def dbChange(query):
         cursor.execute(query)
         db.commit()
         cursor.close()
-        db.close()
+        db.close() """
 
 
-def dbSelectOne(query):
+""" def dbSelectOne(query):
     try: 
         db = mysql.connector.connect(**login)
         print("Connected to the database")
@@ -114,7 +114,42 @@ def dbSelectOne(query):
         result = cursor.fetchone()[0]
         cursor.close()
         db.close()
-        return result
+        return result """
+
+
+def dbQuery(query, statement=None):
+    try: 
+        db = mysql.connector.connect(**login)
+        print("Connected to the database")
+        print("Query:", query)  # Print the query being executed
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("Something is wrong with your user name or password")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("Database does not exist")
+        else: 
+            print(err)
+    else:
+        if query.startswith("SELECT"):
+            cursor = db.cursor()
+            cursor.execute(query)
+            if statement == "one":
+                result = cursor.fetchone()[0]
+            if statement == "all":
+                result = cursor.fetchall()
+            cursor.close()
+            db.close()
+            return result
+        if query.startswith("INSERT") or query.startswith("DELETE"):
+            cursor = db.cursor()
+            cursor.execute(query)
+            db.commit()
+            cursor.close()
+            db.close()
+            if query.startswith("INSERT"):
+                print("Inserted into the database")
+            else:
+                print("Deleted from the database")
 
 
 
@@ -142,15 +177,12 @@ class SimulationButton(Button):
         req = requests.Session()
         req.auth = auth
         req.post(url)
+        data = {
+            "test": "tester",
+            "comment": "json+headers"
+            }
+        req.post("https://repository.dcrgraphs.net/api/graphs/1702929/comments/", json=data, headers={"Content-Type": "application/json"})
 
-        """ if response.is_success:
-            # Handle the success case (e.g., update UI, show a message)
-            print("Event executed successfully!")
-        else:
-            # Handle the error case (e.g., show an error message)
-            print(f"Failed to execute event. Status code: {response.status_code}, Reason: {response.reason_phrase}") """
-
-        # Optionally, create buttons for new enabled events (similar to what you did in start_sim)
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
@@ -211,18 +243,18 @@ class MainApp(App):
         global userRole
         userRole = self.role()
 
-        if dbSelectOne(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';") == False:
-            dbChange(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');" )
+        if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
+            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');")
         
-        if dbSelectOne(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text};") == False:
-            dbChange(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List');")
+        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == False:
+            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List');")
 
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
 
 
     def b_create_instance(self, instance):
-        if dbSelectOne(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};"):
-            simID = dbSelectOne(f"SELECT SimulationID FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
+        if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == True:
+            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()
@@ -250,16 +282,16 @@ class MainApp(App):
 
         if pendingEvents == 0:
             #check if the process already exists in the database
-            alreadyExists = dbSelectOne(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
+            alreadyExists = dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
 
             if alreadyExists == True:
                 # Delete the current simulation from the database
-                dbChange(f"DELETE FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
+                dbQuery(f"DELETE FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
             self.b_right.clear_widgets()
 
 
     def role(self):
-        return dbSelectOne(f"SELECT Role FROM dcrusers WHERE Email = '{self.username.text}';")
+        return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{self.username.text}';", "one")
         
 
 if __name__ == '__main__':
