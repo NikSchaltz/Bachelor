@@ -76,47 +76,6 @@ def create_buttons_of_enabled_events(
                 button_layout.add_widget(s)
 
 
-""" def dbChange(query):
-    try: 
-        db = mysql.connector.connect(**login)
-        print("Connected to the database")
-        print("Query:", query)  # Print the query being executed
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else: 
-            print(err)
-    else:
-        cursor = db.cursor()
-        cursor.execute(query)
-        db.commit()
-        cursor.close()
-        db.close() """
-
-
-""" def dbSelectOne(query):
-    try: 
-        db = mysql.connector.connect(**login)
-        print("Connected to the database")
-        print("Query:", query)  # Print the query being executed
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else: 
-            print(err)
-    else:
-        cursor = db.cursor()
-        cursor.execute(query)
-        result = cursor.fetchone()[0]
-        cursor.close()
-        db.close()
-        return result """
-
-
 def dbQuery(query, statement=None):
     try: 
         db = mysql.connector.connect(**login)
@@ -177,17 +136,11 @@ class SimulationButton(Button):
         req = requests.Session()
         req.auth = auth
         req.post(url, json = {"value": "tester"})
-        """ data = {
-            "test": "tester",
-            "comment": "json+headers"
-            }
-        req.post("https://repository.dcrgraphs.net/api/graphs/1702929/comments/", json=data, headers={"Content-Type": "application/json"})
- """
+        
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
-
-class MainApp(App):
+class SignInApp(App):
     def __init__(self):
         App.__init__(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
@@ -195,7 +148,6 @@ class MainApp(App):
         self.layout_box = BoxLayout(orientation='vertical')
         self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
         self.runSim = Button(text="Create Instance")
-        self.termSim = Button(text="Terminate")
         self.passwordLabel = Label(text="Password")
         self.usernameLabel = Label(text="Username")
         self.graph_idLabel = Label(text="Graph ID")
@@ -206,10 +158,8 @@ class MainApp(App):
         self.b_lowerLeft = BoxLayout(orientation='vertical')
         self.b_upperLeftLeft = BoxLayout(orientation='vertical')
         self.b_upperLeftRight = BoxLayout(orientation='vertical')
-        self.b_right = BoxLayout(orientation='vertical')
         self.b_left = BoxLayout(orientation='vertical')
         self.b_lowerLeft.add_widget(self.runSim)
-        self.b_lowerLeft.add_widget(self.termSim)
         self.b_upperLeftRight.add_widget(self.username)
         self.b_upperLeftRight.add_widget(self.password)
         self.b_upperLeftRight.add_widget(self.graph_id)
@@ -221,17 +171,40 @@ class MainApp(App):
         self.b_left.add_widget(self.b_upperLeft)
         self.b_left.add_widget(self.b_lowerLeft)
         self.b_outer.add_widget(self.b_left)
-        self.b_outer.add_widget(self.b_right)
         self.runSim.bind(on_press=self.b_create_instance)
+
+        return self.b_outer
+    
+    
+    def b_create_instance(self, instance):
+        MainApp().start_sim(instance)
+
+
+
+class MainApp(App):
+    def __init__(self):
+        App.__init__(self)
+        self.layout_box = BoxLayout(orientation='vertical')
+        self.termSim = Button(text="Terminate")
+        self.graph_id = signIn.graph_id.text
+        self.username = signIn.username.text
+        self.password = signIn.password.text
+        
+        
+    def build(self):
+        self.b_outer = BoxLayout()
         self.termSim.bind(on_press=self.b_terminate)
 
         return self.b_outer
 
 
     def start_sim(self, instance):
-        self.current_auth = (self.username.text, self.password.text)
+        self.build()
+        self.layout_box.clear_widgets()
 
-        url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims"
+        self.current_auth = (self.username, self.password)
+
+        url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims"
         auth=self.current_auth
         req = requests.Session()
         req.auth = auth
@@ -243,31 +216,21 @@ class MainApp(App):
         global userRole
         userRole = self.role()
 
-        if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
-            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');")
+        if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username}';","one") == False:
+            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username}' , 'home care worker');")
         
-        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == False:
-            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List');")
+        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id};", "one") == False:
+            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName) VALUES ('{self.graph_id}' , '{self.simulation_id}', 'Task List');")
 
-        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
+        create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.b_outer)
 
-
-    def b_create_instance(self, instance):
-        if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == True:
-            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
-            self.simulation_id = str(simID)
-            global userRole
-            userRole = self.role()
-            create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
-        else:
-            self.start_sim(instance)
     
     def b_terminate(self, instance):
         self.terminate(instance)
 
     def terminate(self, instance):
         pendingEvents = 0
-        events_json = get_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text))
+        events_json = get_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
 
         events = []
         # distinguish between one and multiple events
@@ -282,18 +245,18 @@ class MainApp(App):
 
         if pendingEvents == 0:
             #check if the process already exists in the database
-            alreadyExists = dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
+            alreadyExists = dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id};", "one")
 
             if alreadyExists == True:
                 # Delete the current simulation from the database
-                dbQuery(f"DELETE FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
+                dbQuery(f"DELETE FROM dcrprocesses WHERE GraphID = {self.graph_id};")
             self.b_right.clear_widgets()
 
 
     def role(self):
-        return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{self.username.text}';", "one")
+        return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{self.username}';", "one")
         
 
 if __name__ == '__main__':
-    mainApp = MainApp()
-    MainApp().run()
+    signIn = SignInApp()
+    SignInApp().run()

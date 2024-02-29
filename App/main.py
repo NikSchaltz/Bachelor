@@ -177,12 +177,19 @@ class SimulationButton(Button):
         req = requests.Session()
         req.auth = auth
         req.post(url)
-        data = {
+
+        req.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/{self.event_id}", 
+                json = {"value": "66642069"}, headers={"Content-Type": "application/json"})
+
+
+        
+
+        """ data = {
             "test": "tester",
             "comment": "json+headers"
             }
         req.post("https://repository.dcrgraphs.net/api/graphs/1702929/comments/", json=data, headers={"Content-Type": "application/json"})
-
+    """
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
@@ -297,4 +304,3 @@ class MainApp(App):
 if __name__ == '__main__':
     mainApp = MainApp()
     MainApp().run()
-
