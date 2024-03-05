@@ -262,6 +262,7 @@ class MainApp(App):
         
 
     def uploadNotes(self, instance):
+        #lav et if statement der tjekker om der er skrevet noget i notesBox
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/{self.simulation_id}/events/textbox")
         auth=(self.username.text, self.password.text)
         req = requests.Session()

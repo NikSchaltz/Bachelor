@@ -8,6 +8,8 @@ import xmltodict
 import requests
 import mysql.connector
 from mysql.connector import errorcode
+from datetime import date, datetime
+import re
 
 global userRole
 userRole = ""
@@ -76,47 +78,6 @@ def create_buttons_of_enabled_events(
                 button_layout.add_widget(s)
 
 
-""" def dbChange(query):
-    try: 
-        db = mysql.connector.connect(**login)
-        print("Connected to the database")
-        print("Query:", query)  # Print the query being executed
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else: 
-            print(err)
-    else:
-        cursor = db.cursor()
-        cursor.execute(query)
-        db.commit()
-        cursor.close()
-        db.close() """
-
-
-""" def dbSelectOne(query):
-    try: 
-        db = mysql.connector.connect(**login)
-        print("Connected to the database")
-        print("Query:", query)  # Print the query being executed
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else: 
-            print(err)
-    else:
-        cursor = db.cursor()
-        cursor.execute(query)
-        result = cursor.fetchone()[0]
-        cursor.close()
-        db.close()
-        return result """
-
-
 def dbQuery(query, statement=None):
     try: 
         db = mysql.connector.connect(**login)
@@ -140,7 +101,7 @@ def dbQuery(query, statement=None):
             cursor.close()
             db.close()
             return result
-        if query.startswith("INSERT") or query.startswith("DELETE"):
+        if query.startswith("INSERT") or query.startswith("DELETE") or query.startswith("UPDATE"):
             cursor = db.cursor()
             cursor.execute(query)
             db.commit()
@@ -148,6 +109,8 @@ def dbQuery(query, statement=None):
             db.close()
             if query.startswith("INSERT"):
                 print("Inserted into the database")
+            elif query.startswith("UPDATE"):
+                print("Updated the database")
             else:
                 print("Deleted from the database")
 
@@ -176,13 +139,15 @@ class SimulationButton(Button):
         auth=(self.username, self.password)
         req = requests.Session()
         req.auth = auth
-        req.post(url, json = {"value": "tester"})
+        req.post(url)
+
+
         """ data = {
             "test": "tester",
             "comment": "json+headers"
             }
         req.post("https://repository.dcrgraphs.net/api/graphs/1702929/comments/", json=data, headers={"Content-Type": "application/json"})
- """
+    """
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
@@ -194,11 +159,14 @@ class MainApp(App):
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
         self.layout_box = BoxLayout(orientation='vertical')
         self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
-        self.runSim = Button(text="Create Instance")
-        self.termSim = Button(text="Terminate")
+        self.run_sim = Button(text="Create Instance")
+        self.terminate_sim = Button(text="Terminate")
         self.passwordLabel = Label(text="Password")
         self.usernameLabel = Label(text="Username")
         self.graph_idLabel = Label(text="Graph ID")
+        self.upload_notes = Button(text="Upload notes")
+        self.amount = 0
+        self.notesBox = TextInput(hint_text="Enter notes")
 
     def build(self):
         self.b_outer = BoxLayout()
@@ -208,8 +176,10 @@ class MainApp(App):
         self.b_upperLeftRight = BoxLayout(orientation='vertical')
         self.b_right = BoxLayout(orientation='vertical')
         self.b_left = BoxLayout(orientation='vertical')
-        self.b_lowerLeft.add_widget(self.runSim)
-        self.b_lowerLeft.add_widget(self.termSim)
+        self.b_lowerLeft.add_widget(self.run_sim)
+        self.b_lowerLeft.add_widget(self.terminate_sim)
+        self.b_lowerLeft.add_widget(self.upload_notes)
+        self.b_lowerLeft.add_widget(self.notesBox)
         self.b_upperLeftRight.add_widget(self.username)
         self.b_upperLeftRight.add_widget(self.password)
         self.b_upperLeftRight.add_widget(self.graph_id)
@@ -222,8 +192,11 @@ class MainApp(App):
         self.b_left.add_widget(self.b_lowerLeft)
         self.b_outer.add_widget(self.b_left)
         self.b_outer.add_widget(self.b_right)
-        self.runSim.bind(on_press=self.b_create_instance)
-        self.termSim.bind(on_press=self.b_terminate)
+        self.run_sim.bind(on_press=self.b_create_instance)
+        self.terminate_sim.bind(on_press=self.b_terminate)
+        self.upload_notes.bind(on_press=self.clearNotesBox)
+        self.upload_notes.bind(on_press=self.readNotes)
+        self.upload_notes.bind(on_press=self.uploadNotes)
 
         return self.b_outer
 
@@ -246,21 +219,24 @@ class MainApp(App):
         if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
             dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');")
         
-        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == False:
-            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List');")
+        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == False:
+            today = date.today().strftime('%Y-%m-%d')
+            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
 
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
 
 
     def b_create_instance(self, instance):
-        if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one") == True:
-            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
+        if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == True:
+            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0;", "one")
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()
             create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
         else:
             self.start_sim(instance)
+
+
     
     def b_terminate(self, instance):
         self.terminate(instance)
@@ -278,16 +254,42 @@ class MainApp(App):
             
         for e in events:
             if e.get('@pending') == 'true':
-                pendingEvents += 1
+                pendingEvents += 1     
 
         if pendingEvents == 0:
-            #check if the process already exists in the database
-            alreadyExists = dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text};", "one")
-
-            if alreadyExists == True:
-                # Delete the current simulation from the database
-                dbQuery(f"DELETE FROM dcrprocesses WHERE GraphID = {self.graph_id.text};")
+            dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
             self.b_right.clear_widgets()
+        
+
+    def uploadNotes(self, instance):
+        #lav et if statement der tjekker om der er skrevet noget i notesBox
+        url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/{self.simulation_id}/events/textbox")
+        auth=(self.username.text, self.password.text)
+        req = requests.Session()
+        req.auth = auth
+        self.amount += 1
+        json = {"dataXML": f"{datetime.now().strftime('%Y-%m-%d %H:%M')}: {self.notesBox.text}"}
+
+        req.post(url, json = json)
+
+    def readNotes(self, instance):
+        url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/{self.simulation_id}/")
+        auth=(self.username.text, self.password.text)
+        req = requests.Session()
+        req.auth = auth
+        response = req.get(url)
+        
+        splitEvents = response.text.split("<event ")
+        allNotes = []
+        for item in splitEvents:
+            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="some_value"'
+            if match:
+                allNotes.append(match.group(1).encode('latin1').decode('utf-8'))  # Ensure proper encoding/decoding
+
+        print(allNotes)
+
+    def clearNotesBox(self, instance):
+        self.notesBox.text = ""
 
 
     def role(self):
