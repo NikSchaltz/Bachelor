@@ -1,5 +1,6 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
@@ -157,7 +158,7 @@ class MainApp(App):
         App.__init__(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        self.layout_box = BoxLayout(orientation='vertical')
+        #self.layout_box = BoxLayout(orientation='vertical')
         self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
         self.run_sim = Button(text="Create Instance")
         self.terminate_sim = Button(text="Terminate")
@@ -168,41 +169,112 @@ class MainApp(App):
         self.notesBox = TextInput(hint_text="Enter notes")
 
     def build(self):
-        self.b_outer = BoxLayout()
+        """ self.choose_patient = Button(text ="Vælg patient")
+        self.check_notes = Button(text ="Se noter")
+        self.logout = Button(text ="Log ud") """
+        #self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
+        self.b_outer = BoxLayout(orientation='horizontal')
+        self.box = BoxLayout(orientation='vertical')
         self.b_upperLeft = BoxLayout()
         self.b_lowerLeft = BoxLayout(orientation='vertical')
         self.b_upperLeftLeft = BoxLayout(orientation='vertical')
         self.b_upperLeftRight = BoxLayout(orientation='vertical')
         self.b_right = BoxLayout(orientation='vertical')
         self.b_left = BoxLayout(orientation='vertical')
-        self.b_lowerLeft.add_widget(self.run_sim)
-        self.b_lowerLeft.add_widget(self.terminate_sim)
-        self.b_lowerLeft.add_widget(self.upload_notes)
-        self.b_lowerLeft.add_widget(self.notesBox)
-        self.b_upperLeftRight.add_widget(self.username)
-        self.b_upperLeftRight.add_widget(self.password)
-        self.b_upperLeftRight.add_widget(self.graph_id)
-        self.b_upperLeftLeft.add_widget(self.usernameLabel)
-        self.b_upperLeftLeft.add_widget(self.passwordLabel)
-        self.b_upperLeftLeft.add_widget(self.graph_idLabel)
+        #self.top_bar.add_widget(self.choose_patient)
+        #self.top_bar.add_widget(self.check_notes)
+        #self.top_bar.add_widget(self.logout)
+        #self.b_lowerLeft.add_widget(self.run_sim)
+        #self.b_lowerLeft.add_widget(self.terminate_sim)
+        #self.b_lowerLeft.add_widget(self.upload_notes)
+        #self.b_lowerLeft.add_widget(self.notesBox)
+        #self.b_upperLeftRight.add_widget(self.username)
+        #self.b_upperLeftRight.add_widget(self.password)
+        #self.b_upperLeftRight.add_widget(self.graph_id)
+        #self.b_upperLeftLeft.add_widget(self.usernameLabel)
+        #self.b_upperLeftLeft.add_widget(self.passwordLabel)
+        #self.b_upperLeftLeft.add_widget(self.graph_idLabel)
         self.b_upperLeft.add_widget(self.b_upperLeftLeft)
         self.b_upperLeft.add_widget(self.b_upperLeftRight)
         self.b_left.add_widget(self.b_upperLeft)
         self.b_left.add_widget(self.b_lowerLeft)
         self.b_outer.add_widget(self.b_left)
         self.b_outer.add_widget(self.b_right)
-        self.run_sim.bind(on_press=self.b_create_instance)
-        self.run_sim.bind(on_press=self.remove_widgets)
+        self.box.add_widget(self.top_bar)
+        self.box.add_widget(self.b_outer)
+        #self.run_sim.bind(on_press=self.b_create_instance)
+        #self.run_sim.bind(on_press=self.remove_widgets)
         self.terminate_sim.bind(on_press=self.b_terminate)
+        #self.upload_notes.bind(on_press=self.clearNotesBox)
+        #self.upload_notes.bind(on_press=self.readNotes)
+        #self.upload_notes.bind(on_press=self.uploadNotes)
+
+        return self.box
+    
+    def topBar(self, instance):
+        self.choose_patient = Button(text ="Vælg patient")
+        self.writeNotes = Button(text ="Skriv note")
+        self.check_notes = Button(text ="Se noter")
+        self.logout = Button(text ="Log ud")
+
+        self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
+
+        self.top_bar.add_widget(self.choose_patient)
+        self.top_bar.add_widget(self.check_notes)
+        self.top_bar.add_widget(self.writeNotes)
+        self.top_bar.add_widget(self.logout)
+
+        return self.top_bar
+    
+    def loginScreen(self, instance):
+        self.login_screen = BoxLayout(orientation='vertical')
+        self.left = BoxLayout(orientation='vertical')
+        self.right = BoxLayout(orientation='vertical')
+        self.bottom = BoxLayout(orientation='vertical')
+
+        self.bottom.add_widget(self.run_sim)
+        self.bottom.add_widget(self.terminate_sim)
+
+        self.right.add_widget(self.username)
+        self.right.add_widget(self.password)
+        self.right.add_widget(self.graph_id)
+        self.left.add_widget(self.usernameLabel)
+        self.left.add_widget(self.passwordLabel)
+        self.left.add_widget(self.graph_idLabel)
+
+        self.run_sim.bind(on_press=self.b_create_instance)
+
+
+        self.login_screen.add_widget(self.bottom)
+
+        self.login_screen.add_widget(self.left)
+        self.login_screen.add_widget(self.right)
+
+        return self.login_screen
+        
+
+    def mainScreen(self, instance):
+        pass
+
+    def readNotes(self, instance):
+        pass
+
+    def uploadNotes(self, instance):
+        self.upload_notes = BoxLayout(orientation='vertical')
+
         self.upload_notes.bind(on_press=self.clearNotesBox)
         self.upload_notes.bind(on_press=self.readNotes)
         self.upload_notes.bind(on_press=self.uploadNotes)
 
-        return self.b_outer
-    
-    def remove_widgets(self, instance):
-        self.b_left.clear_widgets()
+        self.upload_notes.add_widget(self.upload_notes)
+        self.upload_notes.add_widget(self.notesBox)
 
+        return self.upload_notes
+
+    
+    """ def cleanScreen(self, instance):
+        self.b_left.clear_widgets()
+ """
 
     def start_sim(self, instance):
         self.current_auth = (self.username.text, self.password.text)

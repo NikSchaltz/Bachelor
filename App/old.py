@@ -165,7 +165,6 @@ class MainApp(App):
         self.usernameLabel = Label(text="Username")
         self.graph_idLabel = Label(text="Graph ID")
         self.upload_notes = Button(text="Upload notes")
-        self.amount = 0
         self.notesBox = TextInput(hint_text="Enter notes")
 
     def build(self):
@@ -193,12 +192,16 @@ class MainApp(App):
         self.b_outer.add_widget(self.b_left)
         self.b_outer.add_widget(self.b_right)
         self.run_sim.bind(on_press=self.b_create_instance)
+        self.run_sim.bind(on_press=self.remove_widgets)
         self.terminate_sim.bind(on_press=self.b_terminate)
         self.upload_notes.bind(on_press=self.clearNotesBox)
         self.upload_notes.bind(on_press=self.readNotes)
         self.upload_notes.bind(on_press=self.uploadNotes)
 
         return self.b_outer
+    
+    def remove_widgets(self, instance):
+        self.b_left.clear_widgets()
 
 
     def start_sim(self, instance):
@@ -267,7 +270,6 @@ class MainApp(App):
         auth=(self.username.text, self.password.text)
         req = requests.Session()
         req.auth = auth
-        self.amount += 1
         json = {"dataXML": f"{datetime.now().strftime('%Y-%m-%d %H:%M')}: {self.notesBox.text}"}
 
         req.post(url, json = json)
@@ -290,6 +292,7 @@ class MainApp(App):
 
     def clearNotesBox(self, instance):
         self.notesBox.text = ""
+
 
 
     def role(self):
