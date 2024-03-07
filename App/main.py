@@ -220,7 +220,7 @@ class MainApp(App):
         userRole = self.role()
 
         if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
-            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');")
+            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
         
         if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == False:
             today = date.today().strftime('%Y-%m-%d')
@@ -231,7 +231,11 @@ class MainApp(App):
 
     def b_create_instance(self, instance):
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == True:
-            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0;", "one")
+            
+            if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
+                dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
+
+            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id.text};", "one")
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()

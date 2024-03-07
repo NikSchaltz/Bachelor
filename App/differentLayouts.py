@@ -154,27 +154,19 @@ class SimulationButton(Button):
 
 
 class MainApp(App):
-    def __init__(self):
-        App.__init__(self)
-        self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
-        self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        #self.layout_box = BoxLayout(orientation='vertical')
-        self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
-        #self.run_sim = Button(text="Create Instance")
-        self.terminate_sim = Button(text="Terminate")
-        self.passwordLabel = Label(text="Password")
-        self.usernameLabel = Label(text="Username")
-        self.graph_idLabel = Label(text="Graph ID")
-        #self.upload_notes = Button(text="Upload notes")
-        self.notesBox = TextInput(hint_text="Enter notes")
-
     def build(self):
+        self.box = BoxLayout(orientation='vertical')
+        self.box_lower = BoxLayout(orientation='vertical')
+        self.box.add_widget(self.topBar(self))
+        self.loginScreen(self)
+        self.box.add_widget(self.box_lower)
+        self.terminate_sim = Button(text="Terminate")
+
+        #self.terminate_sim.bind(on_press=self.b_terminate)
         """ self.choose_patient = Button(text ="Vælg patient")
         self.check_notes = Button(text ="Se noter")
         self.logout = Button(text ="Log ud") """
         #self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
-        self.box = BoxLayout(orientation='vertical')
-        self.box_lower = BoxLayout(orientation='horizontal')
         #self.b_upperLeft = BoxLayout()
         #self.b_lowerLeft = BoxLayout(orientation='vertical')
         #self.b_upperLeftLeft = BoxLayout(orientation='vertical')
@@ -200,15 +192,11 @@ class MainApp(App):
         #self.b_left.add_widget(self.b_lowerLeft)
         #self.b_outer.add_widget(self.b_left)
         #self.b_outer.add_widget(self.b_right)
-        self.box.add_widget(self.topBar(self))
-        self.box.add_widget(self.box_lower)
         #self.run_sim.bind(on_press=self.b_create_instance)
         #self.run_sim.bind(on_press=self.remove_widgets)
-        self.terminate_sim.bind(on_press=self.b_terminate)
         #self.upload_notes.bind(on_press=self.clearNotesBox)
         #self.upload_notes.bind(on_press=self.getNotes)
         #self.upload_notes.bind(on_press=self.uploadNotes)
-
 
         return self.box
     
@@ -231,21 +219,29 @@ class MainApp(App):
         self.choose_patient.bind(on_press=self.choosePatientScreen)
         self.login.bind(on_press=self.loginScreen)
         self.events.bind(on_press=self.eventsScreen)
-        self.events.bind(on_press=self.b_create_instance)
+        #self.events.bind(on_press=self.b_create_instance)
+
+        self.hideTopBar(self)
 
         return self.top_bar
     
     def loginScreen(self, instance):
-        self.box_lower.clear_widgets()
-        self.login_screen = BoxLayout(orientation='vertical')
+        self.cleanScreen(self)
+        self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
+        self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
+        self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
+        self.passwordLabel = Label(text="Password")
+        self.usernameLabel = Label(text="Username")
+        self.graph_idLabel = Label(text="Graph ID")
+        self.login_screen_layout = BoxLayout(orientation='vertical')
+        self.login_boxes = BoxLayout(orientation='horizontal')
         self.left = BoxLayout(orientation='vertical')
         self.right = BoxLayout(orientation='vertical')
-        self.bottom = BoxLayout(orientation='vertical')
+        self.bottom = BoxLayout(orientation='horizontal')
         self.run_sim = Button(text="Create Instance")
 
-
         self.bottom.add_widget(self.run_sim)
-        self.bottom.add_widget(self.terminate_sim)
+        #self.bottom.add_widget(self.terminate_sim)
 
         self.right.add_widget(self.username)
         self.right.add_widget(self.password)
@@ -254,30 +250,46 @@ class MainApp(App):
         self.left.add_widget(self.passwordLabel)
         self.left.add_widget(self.graph_idLabel)
 
+        self.login_boxes.add_widget(self.left)
+        self.login_boxes.add_widget(self.right)
+        self.login_screen_layout.add_widget(self.login_boxes)
+        self.login_screen_layout.add_widget(self.bottom)
+
         self.run_sim.bind(on_press=self.b_create_instance)
+        self.run_sim.bind(on_press=self.choosePatientScreen)
+        self.run_sim.bind(on_press=self.showTopBar)
 
-        self.login_screen.add_widget(self.bottom)
-        self.login_screen.add_widget(self.left)
-        self.login_screen.add_widget(self.right)
+        self.hideTopBar(self)
 
-        return self.login_screen
+        self.box_lower.add_widget(self.login_screen_layout)
         
+    def hideTopBar(self, instance):
+        self.top_bar.disabled = True
+        self.top_bar.opacity = 0
+    
+    def showTopBar(self, instance):
+        self.top_bar.disabled = False
+        self.top_bar.opacity = 1
 
     def eventsScreen(self, instance):
-        self.box_lower.clear_widgets()
+        self.cleanScreen(self)
 
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.box_lower)
 
     def seeNotesScreen(self, instance):
-        self.box_lower.clear_widgets()
+        self.cleanScreen(self)
         #self.upload_notes.bind(on_press=self.getNotes)
 
     def choosePatientScreen(self, instance):
-        self.box_lower.clear_widgets()
+        self.cleanScreen(self)
 
 
-    """ def writeNotes(self, instance):
-        self.box_lower.clear_widgets()
+
+    def writeNotesScreen(self, instance):
+        # Clear existing widgets in box_lower
+        self.cleanScreen(self)
+        self.notesBox = TextInput(hint_text="Enter notes")
+
         self.upload_notes_layout = BoxLayout(orientation='vertical')
         self.upload_notes = Button(text="Upload notes")
 
@@ -288,35 +300,11 @@ class MainApp(App):
         self.upload_notes_layout.add_widget(self.upload_notes)
         self.upload_notes_layout.add_widget(self.notesBox)
 
-        self.box_lower.add_widget(self.upload_notes_layout) """
-
-
-    def writeNotesScreen(self, instance):
-        # Clear existing widgets in box_lower
-        self.box_lower.clear_widgets()
-
-        # Create upload_notes_layout and upload_notes widgets
-        if not hasattr(self, 'upload_notes_layout'):
-            self.upload_notes_layout = BoxLayout(orientation='vertical')
-            self.upload_notes = Button(text="Upload notes")
-
-            self.upload_notes.bind(on_press=self.clearNotesBox)
-            self.upload_notes.bind(on_press=self.getNotes)
-            self.upload_notes.bind(on_press=self.uploadNotes)
-
-            self.upload_notes_layout.add_widget(self.upload_notes)
-            self.upload_notes_layout.add_widget(self.notesBox)
-
         # Add upload_notes_layout to box_lower
         self.box_lower.add_widget(self.upload_notes_layout)
-
-
-        
-
     
-    """ def cleanScreen(self, instance):
-        self.b_left.clear_widgets()
-    """
+    def cleanScreen(self, instance):
+        self.box_lower.clear_widgets()
 
     def start_sim(self, instance):
         self.current_auth = (self.username.text, self.password.text)
@@ -334,7 +322,7 @@ class MainApp(App):
         userRole = self.role()
 
         if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
-            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'home care worker');")
+            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
         
         if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == False:
             today = date.today().strftime('%Y-%m-%d')
@@ -345,7 +333,11 @@ class MainApp(App):
 
     def b_create_instance(self, instance):
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == True:
-            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0;", "one")
+            
+            if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
+                dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
+            
+            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id.text};", "one")
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()
