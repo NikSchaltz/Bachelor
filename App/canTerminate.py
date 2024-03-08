@@ -192,7 +192,7 @@ class MainApp(App):
         self.b_outer.add_widget(self.b_left)
         self.b_outer.add_widget(self.b_right)
         self.run_sim.bind(on_press=self.b_create_instance)
-        self.run_sim.bind(on_press=self.remove_widgets)
+        #self.run_sim.bind(on_press=self.remove_widgets)
         self.terminate_sim.bind(on_press=self.b_terminate)
         self.upload_notes.bind(on_press=self.clearNotesBox)
         self.upload_notes.bind(on_press=self.readNotes)
