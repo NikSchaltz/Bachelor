@@ -1,5 +1,7 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
@@ -153,56 +155,189 @@ class SimulationButton(Button):
 
 
 class MainApp(App):
-    def __init__(self):
-        App.__init__(self)
+    def build(self):
+        self.box = BoxLayout(orientation='vertical')
+        self.box_lower = BoxLayout(orientation='vertical')
+        self.box.add_widget(self.topBar(self))
+        self.loginScreen(self)
+        self.box.add_widget(self.box_lower)
+        self.terminate_sim = Button(text="Terminate")
+
+        #self.terminate_sim.bind(on_press=self.b_terminate)
+        """ self.choose_patient = Button(text ="Vælg patient")
+        self.check_notes = Button(text ="Se noter")
+        self.logout = Button(text ="Log ud") """
+        #self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
+        #self.b_upperLeft = BoxLayout()
+        #self.b_lowerLeft = BoxLayout(orientation='vertical')
+        #self.b_upperLeftLeft = BoxLayout(orientation='vertical')
+        #self.b_upperLeftRight = BoxLayout(orientation='vertical')
+        #self.b_right = BoxLayout(orientation='vertical')
+        #self.b_left = BoxLayout(orientation='vertical')
+        #self.top_bar.add_widget(self.choose_patient)
+        #self.top_bar.add_widget(self.check_notes)
+        #self.top_bar.add_widget(self.logout)
+        #self.b_lowerLeft.add_widget(self.run_sim)
+        #self.b_lowerLeft.add_widget(self.terminate_sim)
+        #self.b_lowerLeft.add_widget(self.upload_notes)
+        #self.b_lowerLeft.add_widget(self.notesBox)
+        #self.b_upperLeftRight.add_widget(self.username)
+        #self.b_upperLeftRight.add_widget(self.password)
+        #self.b_upperLeftRight.add_widget(self.graph_id)
+        #self.b_upperLeftLeft.add_widget(self.usernameLabel)
+        #self.b_upperLeftLeft.add_widget(self.passwordLabel)
+        #self.b_upperLeftLeft.add_widget(self.graph_idLabel)
+        #self.b_upperLeft.add_widget(self.b_upperLeftLeft)
+        #self.b_upperLeft.add_widget(self.b_upperLeftRight)
+        #self.b_left.add_widget(self.b_upperLeft)
+        #self.b_left.add_widget(self.b_lowerLeft)
+        #self.b_outer.add_widget(self.b_left)
+        #self.b_outer.add_widget(self.b_right)
+        #self.run_sim.bind(on_press=self.b_create_instance)
+        #self.run_sim.bind(on_press=self.remove_widgets)
+        #self.upload_notes.bind(on_press=self.clearNotesBox)
+        #self.upload_notes.bind(on_press=self.getNotes)
+        #self.upload_notes.bind(on_press=self.uploadNotes)
+
+        return self.box
+    
+    def topBar(self, instance):
+        self.choose_patient = Button(text ="Vælg patient")
+        self.write_notes = Button(text ="Skriv note")
+        self.see_notes = Button(text ="Se noter")
+        self.login = Button(text ="Log ud")
+        self.events = Button(text ="Events")
+
+        self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
+
+        self.top_bar.add_widget(self.events)
+        self.top_bar.add_widget(self.choose_patient)
+        self.top_bar.add_widget(self.see_notes)
+        self.top_bar.add_widget(self.write_notes)
+        self.top_bar.add_widget(self.login)
+        self.see_notes.bind(on_press=self.seeNotesScreen)
+        self.write_notes.bind(on_press=self.writeNotesScreen)
+        self.choose_patient.bind(on_press=self.choosePatientScreen)
+        self.login.bind(on_press=self.loginScreen)
+        self.events.bind(on_press=self.eventsScreen)
+        #self.events.bind(on_press=self.b_create_instance)
+
+        self.hideTopBar(self)
+
+        return self.top_bar
+    
+    def loginScreen(self, instance):
+        self.cleanScreen(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        self.layout_box = BoxLayout(orientation='vertical')
         self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
-        self.run_sim = Button(text="Create Instance")
-        self.terminate_sim = Button(text="Terminate")
         self.passwordLabel = Label(text="Password")
         self.usernameLabel = Label(text="Username")
         self.graph_idLabel = Label(text="Graph ID")
-        self.upload_notes = Button(text="Upload notes")
+        self.login_screen_layout = BoxLayout(orientation='vertical')
+        self.login_boxes = BoxLayout(orientation='horizontal')
+        self.left = BoxLayout(orientation='vertical')
+        self.right = BoxLayout(orientation='vertical')
+        self.bottom = BoxLayout(orientation='horizontal')
+        self.run_sim = Button(text="Create Instance")
+
+        self.bottom.add_widget(self.run_sim)
+        #self.bottom.add_widget(self.terminate_sim)
+
+        self.right.add_widget(self.username)
+        self.right.add_widget(self.password)
+        self.right.add_widget(self.graph_id)
+        self.left.add_widget(self.usernameLabel)
+        self.left.add_widget(self.passwordLabel)
+        self.left.add_widget(self.graph_idLabel)
+
+        self.login_boxes.add_widget(self.left)
+        self.login_boxes.add_widget(self.right)
+        self.login_screen_layout.add_widget(self.login_boxes)
+        self.login_screen_layout.add_widget(self.bottom)
+
+        self.run_sim.bind(on_press=self.b_create_instance)
+        self.run_sim.bind(on_press=self.choosePatientScreen)
+        self.run_sim.bind(on_press=self.showTopBar)
+
+        self.hideTopBar(self)
+
+        self.box_lower.add_widget(self.login_screen_layout)
+        
+    def hideTopBar(self, instance):
+        self.top_bar.disabled = True
+        self.top_bar.opacity = 0
+    
+    def showTopBar(self, instance):
+        self.top_bar.disabled = False
+        self.top_bar.opacity = 1
+
+    def eventsScreen(self, instance):
+        self.cleanScreen(self)
+
+        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.box_lower)
+
+    def seeNotesScreen(self, instance):
+        self.cleanScreen(self)
+        strings = [
+            "This is a long string that should wrap to a new line if it is too long to fit in its box. This is a long string that should wrap to a new line if it is too long to fit in its box.This is a long string that should wrap to a new line if it is too long to fit in its box.This is a long string that should wrap to a new line if it is too long to fit in its box.This is a long string that should wrap to a new line if it is too long to fit in its box.",
+            "Another long string to demonstrate wrapping.",
+            "Yet another long string to show wrapping in action.",
+            "Short string."
+        ]
+        self.see_notes_layout = ScrollView()
+        string_layout = self.create_string_layout(strings)
+        self.see_notes_layout.add_widget(string_layout)
+        self.box_lower.add_widget(self.see_notes_layout)
+
+
+    def createNotesFields(self, string, button_num):
+        button = Button(text=string, disabled_color=(0, 0, 0, 1))
+        button.bind(width=lambda instance, value: setattr(instance, 'text_size', (value - 20, None)))  # Adjust text_size
+        button.padding = 20  # Add padding on the left side
+        if button_num % 2 == 0:
+            button.background_disabled_normal = 'images/lightGrey.png'  # Set background color
+        else:
+            button.background_disabled_normal = 'images/darkGrey.png'
+        button.disabled = True  # Disable the button
+        button.opacity = 1  # Adjust opacity to visually indicate disabled state
+        return button
+
+    def create_string_layout(self, strings):
+        string_layout = BoxLayout(orientation='vertical')
+        for i, string in enumerate(strings):
+            button = self.createNotesFields(string, i)
+            string_layout.add_widget(button)
+        return string_layout
+
+
+
+
+    def choosePatientScreen(self, instance):
+        self.cleanScreen(self)
+
+
+
+    def writeNotesScreen(self, instance):
+        # Clear existing widgets in box_lower
+        self.cleanScreen(self)
         self.notesBox = TextInput(hint_text="Enter notes")
 
-    def build(self):
-        self.b_outer = BoxLayout()
-        self.b_upperLeft = BoxLayout()
-        self.b_lowerLeft = BoxLayout(orientation='vertical')
-        self.b_upperLeftLeft = BoxLayout(orientation='vertical')
-        self.b_upperLeftRight = BoxLayout(orientation='vertical')
-        self.b_right = BoxLayout(orientation='vertical')
-        self.b_left = BoxLayout(orientation='vertical')
-        self.b_lowerLeft.add_widget(self.run_sim)
-        self.b_lowerLeft.add_widget(self.terminate_sim)
-        self.b_lowerLeft.add_widget(self.upload_notes)
-        self.b_lowerLeft.add_widget(self.notesBox)
-        self.b_upperLeftRight.add_widget(self.username)
-        self.b_upperLeftRight.add_widget(self.password)
-        self.b_upperLeftRight.add_widget(self.graph_id)
-        self.b_upperLeftLeft.add_widget(self.usernameLabel)
-        self.b_upperLeftLeft.add_widget(self.passwordLabel)
-        self.b_upperLeftLeft.add_widget(self.graph_idLabel)
-        self.b_upperLeft.add_widget(self.b_upperLeftLeft)
-        self.b_upperLeft.add_widget(self.b_upperLeftRight)
-        self.b_left.add_widget(self.b_upperLeft)
-        self.b_left.add_widget(self.b_lowerLeft)
-        self.b_outer.add_widget(self.b_left)
-        self.b_outer.add_widget(self.b_right)
-        self.run_sim.bind(on_press=self.b_create_instance)
-        #self.run_sim.bind(on_press=self.remove_widgets)
-        self.terminate_sim.bind(on_press=self.b_terminate)
+        self.upload_notes_layout = BoxLayout(orientation='vertical')
+        self.upload_notes = Button(text="Upload notes")
+
         self.upload_notes.bind(on_press=self.clearNotesBox)
-        self.upload_notes.bind(on_press=self.readNotes)
+        self.upload_notes.bind(on_press=self.getNotes)
         self.upload_notes.bind(on_press=self.uploadNotes)
 
-        return self.b_outer
-    
-    def remove_widgets(self, instance):
-        self.b_left.clear_widgets()
+        self.upload_notes_layout.add_widget(self.notesBox)
+        self.upload_notes_layout.add_widget(self.upload_notes)
 
+        # Add upload_notes_layout to box_lower
+        self.box_lower.add_widget(self.upload_notes_layout)
+    
+    def cleanScreen(self, instance):
+        self.box_lower.clear_widgets()
 
     def start_sim(self, instance):
         self.current_auth = (self.username.text, self.password.text)
@@ -226,7 +361,7 @@ class MainApp(App):
             today = date.today().strftime('%Y-%m-%d')
             dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id.text}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
 
-        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
+        #create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
 
 
     def b_create_instance(self, instance):
@@ -234,12 +369,12 @@ class MainApp(App):
             
             if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
                 dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
-
+            
             simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id.text};", "one")
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()
-            create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
+            #create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
         else:
             self.start_sim(instance)
 
@@ -278,7 +413,7 @@ class MainApp(App):
 
         req.post(url, json = json)
 
-    def readNotes(self, instance):
+    def getNotes(self, instance):
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/{self.simulation_id}/")
         auth=(self.username.text, self.password.text)
         req = requests.Session()
