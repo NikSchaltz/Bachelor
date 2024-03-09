@@ -231,7 +231,8 @@ class MainApp(App):
 
     def b_create_instance(self, instance):
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id.text} AND IsTerminated = 0;", "one") == True:
-            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0;", "one")
+            simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id.text};", "one")
+            
             self.simulation_id = str(simID)
             global userRole
             userRole = self.role()
