@@ -2,8 +2,8 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.dropdown import DropDown
 from kivy.core.window import Window
-
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
@@ -169,42 +169,6 @@ class MainApp(App):
         self.box.add_widget(self.box_lower)
         self.terminate_sim = Button(text="Terminate")
 
-        #self.terminate_sim.bind(on_press=self.b_terminate)
-        """ self.choose_patient = Button(text ="Vælg patient")
-        self.check_notes = Button(text ="Se noter")
-        self.logout = Button(text ="Log ud") """
-        #self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
-        #self.b_upperLeft = BoxLayout()
-        #self.b_lowerLeft = BoxLayout(orientation='vertical')
-        #self.b_upperLeftLeft = BoxLayout(orientation='vertical')
-        #self.b_upperLeftRight = BoxLayout(orientation='vertical')
-        #self.b_right = BoxLayout(orientation='vertical')
-        #self.b_left = BoxLayout(orientation='vertical')
-        #self.top_bar.add_widget(self.choose_patient)
-        #self.top_bar.add_widget(self.check_notes)
-        #self.top_bar.add_widget(self.logout)
-        #self.b_lowerLeft.add_widget(self.run_sim)
-        #self.b_lowerLeft.add_widget(self.terminate_sim)
-        #self.b_lowerLeft.add_widget(self.upload_notes)
-        #self.b_lowerLeft.add_widget(self.notesBox)
-        #self.b_upperLeftRight.add_widget(self.username)
-        #self.b_upperLeftRight.add_widget(self.password)
-        #self.b_upperLeftRight.add_widget(self.graph_id)
-        #self.b_upperLeftLeft.add_widget(self.usernameLabel)
-        #self.b_upperLeftLeft.add_widget(self.passwordLabel)
-        #self.b_upperLeftLeft.add_widget(self.graph_idLabel)
-        #self.b_upperLeft.add_widget(self.b_upperLeftLeft)
-        #self.b_upperLeft.add_widget(self.b_upperLeftRight)
-        #self.b_left.add_widget(self.b_upperLeft)
-        #self.b_left.add_widget(self.b_lowerLeft)
-        #self.b_outer.add_widget(self.b_left)
-        #self.b_outer.add_widget(self.b_right)
-        #self.run_sim.bind(on_press=self.b_create_instance)
-        #self.run_sim.bind(on_press=self.remove_widgets)
-        #self.upload_notes.bind(on_press=self.clearNotesBox)
-        #self.upload_notes.bind(on_press=self.getNotes)
-        #self.upload_notes.bind(on_press=self.uploadNotes)
-
         return self.box
     
     def topBar(self, instance):
@@ -236,10 +200,8 @@ class MainApp(App):
         self.cleanScreen(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        #self.graph_id = TextInput(hint_text="Enter graph id", text = "1702929")
         self.passwordLabel = Label(text="Password")
         self.usernameLabel = Label(text="Username")
-        #self.graph_idLabel = Label(text="Graph ID")
         self.login_screen_layout = BoxLayout(orientation='vertical')
         self.login_boxes = BoxLayout(orientation='horizontal')
         self.left = BoxLayout(orientation='vertical')
@@ -252,10 +214,8 @@ class MainApp(App):
 
         self.right.add_widget(self.username)
         self.right.add_widget(self.password)
-        #self.right.add_widget(self.graph_id)
         self.left.add_widget(self.usernameLabel)
         self.left.add_widget(self.passwordLabel)
-        #self.left.add_widget(self.graph_idLabel)
 
         self.login_boxes.add_widget(self.left)
         self.login_boxes.add_widget(self.right)
@@ -338,18 +298,60 @@ class MainApp(App):
     def writeNotesScreen(self, instance):
         self.cleanScreen(self)
         self.notesBox = TextInput(hint_text="Enter notes")
+        drop_down_label = Label(text="Vælg aktivitet")
 
         self.upload_notes_layout = BoxLayout(orientation='vertical')
+        self.upload_notes_layout_drop_down = BoxLayout(orientation='vertical')
+        self.upload_notes_layout_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
         self.upload_notes = Button(text="Upload notes")
 
         self.upload_notes.bind(on_press=self.clearNotesBox)
         self.upload_notes.bind(on_press=self.uploadNotes)
 
         self.upload_notes_layout.add_widget(self.notesBox)
-        self.upload_notes_layout.add_widget(self.upload_notes)
 
-        # Add upload_notes_layout to box_lower
+        self.upload_notes_layout_drop_down.add_widget(drop_down_label)
+        self.upload_notes_layout_drop_down.add_widget(self.addActivityToNotes(instance))
+        self.upload_notes_layout_buttons.add_widget(self.upload_notes)
+        self.upload_notes_layout_buttons.add_widget(self.upload_notes_layout_drop_down)
+        self.upload_notes_layout.add_widget(self.upload_notes_layout_buttons)
+
         self.box_lower.add_widget(self.upload_notes_layout)
+
+
+    def addActivityToNotes(self, instance):
+        drop_down = DropDown()
+        req = requests.Session()
+        req.auth = (self.username.text, self.password.text)
+        next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
+                                        str(self.graph_id) + "/sims/" + self.simulation_id + "/events")
+
+        events_xml = next_activities_response.text
+        events_xml_no_quotes = events_xml[1:len(events_xml)-1]
+        events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
+        events_json = xmltodict.parse(events_xml_clean)
+
+
+        global userRole
+        events = []
+        # distinguish between one and multiple events
+        if not isinstance(events_json['events']['event'], list):
+            events = [events_json['events']['event']]
+        else:
+            events = events_json['events']['event']
+
+        for e in events:
+            if e['@roles'] == userRole:
+                btn = Button(text=e['@label'], size_hint_y=None, height=44)
+                btn.bind(on_release=lambda btn: drop_down.select(btn.text))
+                drop_down.add_widget(btn)
+        self.selected_activity_notes = Button(text='Generelt')        
+        self.selected_activity_notes.bind(on_release=drop_down.open)
+
+        drop_down.bind(on_select=lambda instance, x: setattr(self.selected_activity_notes, 'text', x))
+
+        return self.selected_activity_notes
+
     
     def cleanScreen(self, instance):
         self.box_lower.clear_widgets()
@@ -423,7 +425,7 @@ class MainApp(App):
         auth=(self.username.text, self.password.text)
         req = requests.Session()
         req.auth = auth
-        json = {"dataXML": f"{datetime.now().strftime('%Y-%m-%d %H:%M')}: \n{self.notesBox.text}"}
+        json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {self.selected_activity_notes.text} \n{self.notesBox.text}"}
 
         req.post(url, json = json)
 
