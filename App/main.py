@@ -162,14 +162,15 @@ class PatientButton(Button):
 
 class MainApp(App):
     def build(self):
-        self.box = BoxLayout(orientation='vertical')
+        box = BoxLayout(orientation='vertical')
         self.box_lower = BoxLayout(orientation='vertical')
-        self.box.add_widget(self.topBar(self))
+        box.add_widget(self.topBar(self))
         self.loginScreen(self)
-        self.box.add_widget(self.box_lower)
+        box.add_widget(self.box_lower)
         self.terminate_sim = Button(text="Terminate")
 
-        return self.box
+        return box
+    
     
     def topBar(self, instance):
         self.choose_patient = Button(text ="Vælg patient")
@@ -200,35 +201,35 @@ class MainApp(App):
         self.cleanScreen(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        self.passwordLabel = Label(text="Password")
-        self.usernameLabel = Label(text="Username")
-        self.login_screen_layout = BoxLayout(orientation='vertical')
-        self.login_boxes = BoxLayout(orientation='horizontal')
-        self.left = BoxLayout(orientation='vertical')
-        self.right = BoxLayout(orientation='vertical')
-        self.bottom = BoxLayout(orientation='horizontal')
-        self.run_sim = Button(text="Create Instance")
+        password_labell = Label(text="Password")
+        username_label = Label(text="Username")
+        login_screen_layout = BoxLayout(orientation='vertical')
+        login_boxes = BoxLayout(orientation='horizontal')
+        left = BoxLayout(orientation='vertical')
+        right = BoxLayout(orientation='vertical')
+        bottom = BoxLayout(orientation='horizontal')
+        run_sim = Button(text="Create Instance")
 
-        self.bottom.add_widget(self.run_sim)
-        #self.bottom.add_widget(self.terminate_sim)
+        bottom.add_widget(run_sim)
+        #bottom.add_widget(self.terminate_sim)
 
-        self.right.add_widget(self.username)
-        self.right.add_widget(self.password)
-        self.left.add_widget(self.usernameLabel)
-        self.left.add_widget(self.passwordLabel)
+        right.add_widget(self.username)
+        right.add_widget(self.password)
+        left.add_widget(username_label)
+        left.add_widget(password_labell)
 
-        self.login_boxes.add_widget(self.left)
-        self.login_boxes.add_widget(self.right)
-        self.login_screen_layout.add_widget(self.login_boxes)
-        self.login_screen_layout.add_widget(self.bottom)
+        login_boxes.add_widget(left)
+        login_boxes.add_widget(right)
+        login_screen_layout.add_widget(login_boxes)
+        login_screen_layout.add_widget(bottom)
 
-        #self.run_sim.bind(on_press=self.b_create_instance)
-        self.run_sim.bind(on_press=self.choosePatientScreen)
-        #self.run_sim.bind(on_press=self.showTopBar)
+        #run_sim.bind(on_press=self.b_create_instance)
+        run_sim.bind(on_press=self.choosePatientScreen)
+        #run_sim.bind(on_press=self.showTopBar)
 
         self.hideTopBar(self)
 
-        self.box_lower.add_widget(self.login_screen_layout)
+        self.box_lower.add_widget(login_screen_layout)
         
     def hideTopBar(self, instance):
         self.top_bar.disabled = True
@@ -246,10 +247,10 @@ class MainApp(App):
     def seeNotesScreen(self, instance):
         self.cleanScreen(self)
         notes = self.getNotes(instance)
-        self.see_notes_layout = ScrollView()
+        see_notes_layout = ScrollView()
         string_layout = self.create_string_layout(notes)
-        self.see_notes_layout.add_widget(string_layout)
-        self.box_lower.add_widget(self.see_notes_layout)
+        see_notes_layout.add_widget(string_layout)
+        self.box_lower.add_widget(see_notes_layout)
 
     def createNotesFields(self, string, button_num):
         button = Button(text=string, disabled_color=(0, 0, 0, 1), height=800)  # Adjust height as needed
@@ -282,7 +283,7 @@ class MainApp(App):
 
     def choosePatientScreen(self, instance):
         self.cleanScreen(self)
-        self.patient_buttons = BoxLayout(orientation='vertical')
+        patient_buttons = BoxLayout(orientation='vertical')
 
         patients = dbQuery("SELECT * FROM DCRGraphs;", "all")
         for patient in patients:
@@ -290,36 +291,36 @@ class MainApp(App):
             pButton.bind(on_press=self.eventsScreen)
             pButton.bind(on_press=self.b_create_instance)
             pButton.bind(on_press=self.showTopBar)
-            self.patient_buttons.add_widget(pButton)
+            patient_buttons.add_widget(pButton)
         
-        self.box_lower.add_widget(self.patient_buttons)
+        self.box_lower.add_widget(patient_buttons)
 
 
     def writeNotesScreen(self, instance):
         self.cleanScreen(self)
-        self.notesBox = TextInput(hint_text="Enter notes")
+        self.notes_box = TextInput(hint_text="Enter notes")
         drop_down_label = Label(text="Vælg aktivitet")
 
-        self.upload_notes_layout = BoxLayout(orientation='vertical')
-        self.upload_notes_layout_drop_down = BoxLayout(orientation='vertical')
-        self.upload_notes_layout_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
-        self.upload_notes = Button(text="Upload notes")
+        upload_notes_layout = BoxLayout(orientation='vertical')
+        upload_notes_layout_drop_down = BoxLayout(orientation='vertical')
+        upload_notes_layout_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
+        upload_notes = Button(text="Upload notes")
 
-        self.upload_notes.bind(on_press=self.clearNotesBox)
-        self.upload_notes.bind(on_press=self.uploadNotes)
+        upload_notes.bind(on_press=self.clearNotesBox)
+        upload_notes.bind(on_press=self.uploadNotes)
 
-        self.upload_notes_layout.add_widget(self.notesBox)
+        upload_notes_layout.add_widget(self.notes_box)
 
-        self.upload_notes_layout_drop_down.add_widget(drop_down_label)
-        self.upload_notes_layout_drop_down.add_widget(self.addActivityToNotes(instance))
-        self.upload_notes_layout_buttons.add_widget(self.upload_notes)
-        self.upload_notes_layout_buttons.add_widget(self.upload_notes_layout_drop_down)
-        self.upload_notes_layout.add_widget(self.upload_notes_layout_buttons)
+        upload_notes_layout_drop_down.add_widget(drop_down_label)
+        upload_notes_layout_drop_down.add_widget(self.addActivityToNotes(instance))
+        upload_notes_layout_buttons.add_widget(upload_notes)
+        upload_notes_layout_buttons.add_widget(upload_notes_layout_drop_down)
+        upload_notes_layout.add_widget(upload_notes_layout_buttons)
 
-        self.box_lower.add_widget(self.upload_notes_layout)
+        self.box_lower.add_widget(upload_notes_layout)
 
 
-    def addActivityToNotes(self, instance):
+    """ def addActivityToNotes(self, instance):
         drop_down = DropDown()
         req = requests.Session()
         req.auth = (self.username.text, self.password.text)
@@ -342,7 +343,7 @@ class MainApp(App):
 
         for e in events:
             if e['@roles'] == userRole:
-                btn = Button(text=e['@label'], size_hint_y=None, height=44)
+                btn = Button(text=e['@label'], size_hint_y=None, height=44) # change to change the height of each button in the dropdown
                 btn.bind(on_release=lambda btn: drop_down.select(btn.text))
                 drop_down.add_widget(btn)
         self.selected_activity_notes = Button(text='Generelt')        
@@ -350,17 +351,61 @@ class MainApp(App):
 
         drop_down.bind(on_select=lambda instance, x: setattr(self.selected_activity_notes, 'text', x))
 
+        return self.selected_activity_notes """
+
+
+    def addActivityToNotes(self, instance):
+        drop_down = DropDown()
+
+        req = requests.Session()
+        req.auth = (self.username.text, self.password.text)
+        next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
+                                        str(self.graph_id) + "/sims/" + self.simulation_id + "/events")
+
+        events_xml = next_activities_response.text
+        events_xml_no_quotes = events_xml[1:len(events_xml)-1]
+        events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
+        events_json = xmltodict.parse(events_xml_clean)
+
+        global userRole
+        events = []
+        # distinguish between one and multiple events
+        if not isinstance(events_json['events']['event'], list):
+            events = [events_json['events']['event']]
+        else:
+            events = events_json['events']['event']
+
+        layout = GridLayout(cols=1, spacing=0, size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
+
+        for e in events:
+            if e['@roles'] == userRole:
+                btn = Button(text=e['@label'], size_hint_y=None, height=44) # change to change the height of each button in the dropdown
+                btn.bind(on_release=lambda btn: drop_down.select(btn.text))
+                layout.add_widget(btn)
+
+        scroll_view = ScrollView(size_hint=(1, None), height=800)
+        scroll_view.add_widget(layout)
+
+        drop_down.add_widget(scroll_view)
+
+        self.selected_activity_notes = Button(text='Generelt')        
+        self.selected_activity_notes.bind(on_release=drop_down.open)
+
+        drop_down.bind(on_select=lambda instance, x: setattr(self.selected_activity_notes, 'text', x))
+
         return self.selected_activity_notes
+
 
     
     def cleanScreen(self, instance):
         self.box_lower.clear_widgets()
 
     def start_sim(self, instance):
-        self.current_auth = (self.username.text, self.password.text)
+        current_auth = (self.username.text, self.password.text)
 
         url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims"
-        auth=self.current_auth
+        auth=current_auth
         req = requests.Session()
         req.auth = auth
         resp = req.post(url)
@@ -425,7 +470,7 @@ class MainApp(App):
         auth=(self.username.text, self.password.text)
         req = requests.Session()
         req.auth = auth
-        json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {self.selected_activity_notes.text} \n{self.notesBox.text}"}
+        json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {self.selected_activity_notes.text} \n{self.notes_box.text}"}
 
         req.post(url, json = json)
 
@@ -448,7 +493,7 @@ class MainApp(App):
         return allNotes
 
     def clearNotesBox(self, instance):
-        self.notesBox.text = ""
+        self.notes_box.text = ""
 
 
     def role(self):
