@@ -18,6 +18,10 @@ import re
 global userRole
 userRole = ""
 
+global onTaskList
+onTaskList = False
+
+
 login = {
     'host': "bachelor-adit-nikolaj.mysql.database.azure.com",
     'user': "bachelorprojekt",
@@ -30,12 +34,14 @@ login = {
 
 #gets the tasks that are able to be done in the task list at this moment
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
-        
+    
+    #Connects to the api
     req = requests.Session()
     req.auth = auth
     next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
                                     str(graph_id) + "/sims/" + sim_id + "/events?filter=only-enabled")
 
+    #Reformats the xml to json  
     events_xml = next_activities_response.text
     events_xml_no_quotes = events_xml[1:len(events_xml)-1]
     events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
@@ -153,6 +159,7 @@ class SimulationButton(Button):
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
+#this class is used to make the buttons that are used to choose a patient/resident
 class PatientButton(Button):
     def __init__ (self, graph_id: int, text: str):
         Button.__init__(self)
@@ -174,7 +181,6 @@ class MainApp(App):
         box.add_widget(self.topBar(self))
         self.loginScreen(self)
         box.add_widget(self.box_lower)
-        self.terminate_sim = Button(text="Terminate")
 
         return box
     
@@ -188,6 +194,12 @@ class MainApp(App):
         events_button = Button(text ="Events")
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
+
+        
+        self.terminate_sim = Button(text="Terminate")
+        self.terminate_sim.bind(on_press=self.terminate)
+        self.top_bar.add_widget(self.terminate_sim)
+
 
         #Adds the buttons to the topbar
         self.top_bar.add_widget(events_button)
@@ -207,7 +219,7 @@ class MainApp(App):
 
         return self.top_bar
     
-
+    #Designs the login screen and shows it
     def loginScreen(self, instance):
         self.cleanScreen(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
@@ -222,7 +234,6 @@ class MainApp(App):
         run_sim = Button(text="Create Instance")
 
         bottom.add_widget(run_sim)
-        #bottom.add_widget(self.terminate_sim)
 
         right.add_widget(self.username)
         right.add_widget(self.password)
@@ -241,20 +252,25 @@ class MainApp(App):
         self.hideTopBar(self)
 
         self.box_lower.add_widget(login_screen_layout)
-        
+
+    
+    #Function to hide the topbar    
     def hideTopBar(self, instance):
         self.top_bar.disabled = True
         self.top_bar.opacity = 0
     
+    #Function to show the topbar
     def showTopBar(self, instance):
         self.top_bar.disabled = False
         self.top_bar.opacity = 1
 
+    #Function to create and show the events screen
     def eventsScreen(self, instance):
         self.cleanScreen(self)
 
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username.text, self.password.text), self.box_lower)
 
+    #Function to show the notes screen
     def seeNotesScreen(self, instance):
         self.cleanScreen(self)
         notes = self.getNotes(instance)
@@ -263,6 +279,7 @@ class MainApp(App):
         see_notes_layout.add_widget(string_layout)
         self.box_lower.add_widget(see_notes_layout)
 
+    #Function to create the notes fields
     def createNotesFields(self, string, button_num):
         button = Button(text=string, disabled_color=(0, 0, 0, 1), height=800)  # Adjust height as needed
         button.bind(width=lambda instance, value: setattr(instance, 'text_size', (value - 20, None)))  # Adjust text_size
@@ -275,6 +292,7 @@ class MainApp(App):
         button.opacity = 1  # Adjust opacity to visually indicate disabled state
         return button
 
+    #Function to create the layout for the notes
     def create_string_layout(self, strings):
         string_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
         string_layout.bind(minimum_height=string_layout.setter('height'))  # Set minimum height based on content
@@ -292,6 +310,7 @@ class MainApp(App):
         scroll_view.add_widget(string_layout)
         return scroll_view
 
+    #Function that shows which patients are available to choose from
     def choosePatientScreen(self, instance):
         self.cleanScreen(self)
         patient_buttons = BoxLayout(orientation='vertical')
@@ -306,7 +325,7 @@ class MainApp(App):
         
         self.box_lower.add_widget(patient_buttons)
 
-
+    #Shows the screen where you can write notes
     def writeNotesScreen(self, instance):
         self.cleanScreen(self)
         self.notes_box = TextInput(hint_text="Enter notes")
@@ -316,6 +335,9 @@ class MainApp(App):
         upload_notes_layout_drop_down = BoxLayout(orientation='vertical')
         upload_notes_layout_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
         upload_notes = Button(text="Upload notes")
+
+        
+
 
         upload_notes.bind(on_press=self.clearNotesBox)
         upload_notes.bind(on_press=self.uploadNote)
@@ -375,11 +397,12 @@ class MainApp(App):
         return self.selected_activity_notes
 
 
-    
+    #Function to clear the screen of widgets
     def cleanScreen(self, instance):
         self.box_lower.clear_widgets()
 
-    def start_sim(self, instance):
+    #Function to start the simulation
+    def startSim(self, instance):
         current_auth = (self.username.text, self.password.text)
 
         url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims"
@@ -394,20 +417,24 @@ class MainApp(App):
         global userRole
         userRole = self.role()
 
-        if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
-            dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
+        #Adds the user to the database if they are not already in it
+        #if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
+        #    dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
         
+        #Inserts the simulation into the database if it is not already there
         if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == False:
             today = date.today().strftime('%Y-%m-%d')
             dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
 
-
+    #Starts a new simulation or continues one if it is already running
     def b_create_instance(self, instance):
         self.graph_id = instance.choosePatient(instance)
+        #Checks if there is already a simulation running
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == True:
             
-            if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
-                dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
+            #Adds the user to the database if they are not already in it
+            #if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{self.username.text}';","one") == False:
+            #    dbQuery(f"INSERT INTO DCRUsers (Email, Role) VALUES ('{self.username.text}' , 'Personale');")
             
             simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id};", "one")
             self.simulation_id = str(simID)
@@ -415,13 +442,10 @@ class MainApp(App):
             userRole = self.role()
             #create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username.text, self.password.text), self.b_right)
         else:
-            self.start_sim(instance)
+            self.startSim(instance)
 
 
-    
-    def b_terminate(self, instance):
-        self.terminate(instance)
-
+    #Terminates the simulation
     def terminate(self, instance):
         pendingEvents = 0
         events_json = get_enabled_events(self.graph_id, self.simulation_id, (self.username.text, self.password.text))
@@ -439,9 +463,10 @@ class MainApp(App):
 
         if pendingEvents == 0:
             dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
-            self.b_right.clear_widgets()
-        
+            self.cleanScreen(self)
 
+        
+    #Uploads the notes to the api, by sending a post request
     def uploadNote(self, instance):
         #lav et if statement der tjekker om der er skrevet noget i notesBox
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/textbox")
@@ -452,6 +477,7 @@ class MainApp(App):
 
         req.post(url, json = json)
 
+    #Gets the notes from the api
     def getNotes(self, instance):
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/")
         auth=(self.username.text, self.password.text)
@@ -470,10 +496,11 @@ class MainApp(App):
 
         return allNotes
 
+    #Clears the notes box
     def clearNotesBox(self, instance):
         self.notes_box.text = ""
 
-
+    #Gets the role of the user
     def role(self):
         return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{self.username.text}';", "one")
         
