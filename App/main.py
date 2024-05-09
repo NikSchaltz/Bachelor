@@ -28,6 +28,7 @@ login = {
     }
 
 
+#gets the tasks that are able to be done in the task list at this moment
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
         
     req = requests.Session()
@@ -42,6 +43,7 @@ def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     return events_json
 
 
+#Creates the buttons for the tasks that are able to be done in the task list at this moment
 def create_buttons_of_enabled_events(
     graph_id: str,
     sim_id: str,
@@ -82,8 +84,9 @@ def create_buttons_of_enabled_events(
                 button_layout.add_widget(s)
 
 
+#Connects to the database and runs a query
 def dbQuery(query, statement=None):
-    try: 
+    try: #Tries to connect to the database
         db = mysql.connector.connect(**login)
         print("Connected to the database")
         print("Query:", query)  # Print the query being executed
@@ -94,6 +97,7 @@ def dbQuery(query, statement=None):
             print("Database does not exist")
         else: 
             print(err)
+    #If you can connect to the database, it will run the query
     else:
         if query.startswith("SELECT"):
             cursor = db.cursor()
@@ -137,7 +141,7 @@ class SimulationButton(Button):
         self.manipulate_box_layout: BoxLayout = BoxLayout()
         self.bind(on_press=self.execute_event)
 
-
+    #When the button is pressed, it will execute the event, which means accessing the api to execute the event
     def execute_event(self, instance):
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/{self.event_id}")
         auth=(self.username, self.password)
@@ -145,6 +149,7 @@ class SimulationButton(Button):
         req.auth = auth
         req.post(url)
 
+        #Creates the new buttons for the tasks that are able to be done in the task list at this moment
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, auth, self.manipulate_box_layout)
 
 
@@ -161,7 +166,9 @@ class PatientButton(Button):
 
 
 class MainApp(App):
+    #Creates the base of the app
     def build(self):
+        #One outer box layout that contains the top bar and the lower box layout
         box = BoxLayout(orientation='vertical')
         self.box_lower = BoxLayout(orientation='vertical')
         box.add_widget(self.topBar(self))
@@ -171,32 +178,36 @@ class MainApp(App):
 
         return box
     
-    
+    #Creates the topbar and the buttons that are in the topbar
     def topBar(self, instance):
-        self.choose_patient = Button(text ="Vælg patient")
-        self.write_notes = Button(text ="Skriv note")
-        self.see_notes = Button(text ="Se noter")
-        self.login = Button(text ="Log ud")
-        self.events = Button(text ="Events")
+        #Creates the buttons for each of the 5 pages in the app
+        choose_patient = Button(text ="Vælg patient")
+        write_notes = Button(text ="Skriv note")
+        see_notes = Button(text ="Se noter")
+        login_button = Button(text ="Log ud")
+        events_button = Button(text ="Events")
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
-        self.top_bar.add_widget(self.events)
-        self.top_bar.add_widget(self.choose_patient)
-        self.top_bar.add_widget(self.see_notes)
-        self.top_bar.add_widget(self.write_notes)
-        self.top_bar.add_widget(self.login)
-        self.see_notes.bind(on_press=self.seeNotesScreen)
-        self.write_notes.bind(on_press=self.writeNotesScreen)
-        self.choose_patient.bind(on_press=self.choosePatientScreen)
-        self.choose_patient.bind(on_press=self.hideTopBar)
-        self.login.bind(on_press=self.loginScreen)
-        self.events.bind(on_press=self.eventsScreen)
+        #Adds the buttons to the topbar
+        self.top_bar.add_widget(events_button)
+        self.top_bar.add_widget(choose_patient)
+        self.top_bar.add_widget(see_notes)
+        self.top_bar.add_widget(write_notes)
+        self.top_bar.add_widget(login_button)
+        #Binds the buttons to the functions that they should run when they are pressed
+        see_notes.bind(on_press=self.seeNotesScreen)
+        write_notes.bind(on_press=self.writeNotesScreen)
+        choose_patient.bind(on_press=self.choosePatientScreen)
+        choose_patient.bind(on_press=self.hideTopBar)
+        login_button.bind(on_press=self.loginScreen)
+        events_button.bind(on_press=self.eventsScreen)
 
         self.hideTopBar(self)
 
         return self.top_bar
     
+
     def loginScreen(self, instance):
         self.cleanScreen(self)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
@@ -307,7 +318,7 @@ class MainApp(App):
         upload_notes = Button(text="Upload notes")
 
         upload_notes.bind(on_press=self.clearNotesBox)
-        upload_notes.bind(on_press=self.uploadNotes)
+        upload_notes.bind(on_press=self.uploadNote)
 
         upload_notes_layout.add_widget(self.notes_box)
 
@@ -320,40 +331,7 @@ class MainApp(App):
         self.box_lower.add_widget(upload_notes_layout)
 
 
-    """ def addActivityToNotes(self, instance):
-        drop_down = DropDown()
-        req = requests.Session()
-        req.auth = (self.username.text, self.password.text)
-        next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
-                                        str(self.graph_id) + "/sims/" + self.simulation_id + "/events")
-
-        events_xml = next_activities_response.text
-        events_xml_no_quotes = events_xml[1:len(events_xml)-1]
-        events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
-        events_json = xmltodict.parse(events_xml_clean)
-
-
-        global userRole
-        events = []
-        # distinguish between one and multiple events
-        if not isinstance(events_json['events']['event'], list):
-            events = [events_json['events']['event']]
-        else:
-            events = events_json['events']['event']
-
-        for e in events:
-            if e['@roles'] == userRole:
-                btn = Button(text=e['@label'], size_hint_y=None, height=44) # change to change the height of each button in the dropdown
-                btn.bind(on_release=lambda btn: drop_down.select(btn.text))
-                drop_down.add_widget(btn)
-        self.selected_activity_notes = Button(text='Generelt')        
-        self.selected_activity_notes.bind(on_release=drop_down.open)
-
-        drop_down.bind(on_select=lambda instance, x: setattr(self.selected_activity_notes, 'text', x))
-
-        return self.selected_activity_notes """
-
-
+    #This function is used to add a dropdown menu to the writeNotesScreen function, so that you can choose which activity you want to write notes for
     def addActivityToNotes(self, instance):
         drop_down = DropDown()
 
@@ -464,7 +442,7 @@ class MainApp(App):
             self.b_right.clear_widgets()
         
 
-    def uploadNotes(self, instance):
+    def uploadNote(self, instance):
         #lav et if statement der tjekker om der er skrevet noget i notesBox
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/textbox")
         auth=(self.username.text, self.password.text)
