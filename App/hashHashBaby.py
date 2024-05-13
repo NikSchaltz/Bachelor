@@ -221,13 +221,14 @@ class MainApp(App):
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
         
-        self.terminate_sim = Button(text="Force terminate")
-        self.terminate_sim.bind(on_press=self.forceTerminate)
+        self.terminate_sim = Button(text="Terminate")
+        self.terminate_sim.bind(on_press=self.terminate)
         self.top_bar.add_widget(self.terminate_sim)
 
         """ self.stop_reload_events = Button(text="Stop reload")
         self.stop_reload_events.bind(on_press=lambda instance: stopReloadEvents())
         self.top_bar.add_widget(self.stop_reload_events) """
+
 
         #Adds the buttons to the topbar
         self.top_bar.add_widget(events_button)
@@ -492,10 +493,6 @@ class MainApp(App):
         if pendingEvents == 0:
             dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
             self.cleanScreen(self)
-
-    def forceTerminate(self, instance):          
-        dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
-        self.cleanScreen(self)
 
         
     #Uploads the notes to the api, by sending a post request
