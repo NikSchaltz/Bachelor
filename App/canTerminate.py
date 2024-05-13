@@ -57,7 +57,7 @@ def create_buttons_of_enabled_events(
         events = events_json['events']['event']
     
     for e in events:
-        if e['@roles'] == userRole:
+        if e['@roles'] == userRole or e['@roles'] == "":
             if e['@executed'] == 'false':
                 s = SimulationButton(
                     #the actual event id
