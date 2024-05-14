@@ -16,11 +16,15 @@ from mysql.connector import errorcode
 from datetime import date, datetime
 import re
 import hashlib
+import time
 
 
 
-global userRole
 userRole = ""
+
+scheduledReloads = []
+
+
 
 login = {
     'host': "bachelor-adit-nikolaj.mysql.database.azure.com",
@@ -43,7 +47,7 @@ def hashData(data: str):
 
 
 #gets the tasks that are able to be done in the task list at this moment
-def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
+def getEnabledEvents(graph_id: str, sim_id: str, auth: (str, str)):
     
     #Connects to the api
     req = requests.Session()
@@ -65,7 +69,7 @@ def createButtonsOfEnabledEvents(
     auth: (str, str),
     button_layout: BoxLayout):
 
-    events_json = get_enabled_events(graph_id, sim_id, auth)
+    events_json = getEnabledEvents(graph_id, sim_id, auth)
     # cleanup of previous widgets
     button_layout.clear_widgets()
 
@@ -101,19 +105,16 @@ def createButtonsOfEnabledEvents(
     # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
     start_reload_events = lambda dt: createButtonsOfEnabledEvents(graph_id, sim_id, auth, button_layout)
     Clock.schedule_once(start_reload_events, 5)
+    global scheduledReloads
+    scheduledReloads.append(start_reload_events)
 
 
 
-def stopReloadEvents():
-    global start_reload_events
-    if start_reload_events:
-        Clock.unschedule(start_reload_events)
-
-def stopReloadNotes():
-    global start_reload_notes
-    if start_reload_notes:
-        Clock.unschedule(start_reload_notes)
-
+def stopReloads():
+    global scheduledReloads
+    for reload in scheduledReloads:
+        Clock.unschedule(reload)
+    scheduledReloads = []
 
 #Connects to the database and runs a query
 def dbQuery(query, statement=None):
@@ -226,7 +227,7 @@ class MainApp(App):
         self.top_bar.add_widget(self.terminate_sim)
 
         """ self.stop_reload_events = Button(text="Stop reload")
-        self.stop_reload_events.bind(on_press=lambda instance: stopReloadEvents())
+        self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
         self.top_bar.add_widget(self.stop_reload_events) """
 
         #Adds the buttons to the topbar
@@ -274,15 +275,26 @@ class MainApp(App):
         login_screen_layout.add_widget(login_boxes)
         login_screen_layout.add_widget(bottom)
 
-        #run_sim.bind(on_press=self.b_create_instance)
-        run_sim.bind(on_press=self.choosePatientScreen)
-        #run_sim.bind(on_press=self.showTopBar)
+        #run_sim.bind(on_press=self.choosePatientScreen)
+        run_sim.bind(on_press=self.login)
 
         self.hideTopBar(self)
 
         self.box_lower.add_widget(login_screen_layout)
 
     
+    def login(self, instance):
+        emails = dbQuery("SELECT * FROM dcrusers;", "all")
+        for email in emails: 
+            if email[0] == hashData(self.username.text):
+                if email[1] == hashData("Admin"):
+                    self.adminScreen(self)
+                else:
+                    self.choosePatientScreen(self)
+
+        
+
+
     #Function to hide the topbar    
     def hideTopBar(self, instance):
         self.top_bar.disabled = True
@@ -313,6 +325,8 @@ class MainApp(App):
         # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
         start_reload_notes = lambda dt: self.showNotesScreen(instance)
         Clock.schedule_once(start_reload_notes, 5)
+        global scheduledReloads
+        scheduledReloads.append(start_reload_notes)
 
 
 
@@ -356,7 +370,7 @@ class MainApp(App):
         for patient in patients:
             pButton = PatientButton(patient[0], patient[1])
             pButton.bind(on_press=self.eventsScreen)
-            pButton.bind(on_press=self.b_create_instance)
+            pButton.bind(on_press=self.createInstance)
             pButton.bind(on_press=self.showTopBar)
             patient_buttons.add_widget(pButton)
         
@@ -434,9 +448,8 @@ class MainApp(App):
 
     #Function to clear the screen of widgets
     def cleanScreen(self, instance):
+        stopReloads()
         self.box_lower.clear_widgets()
-        stopReloadEvents()
-        stopReloadNotes()
 
     #Function to start the simulation
     def startSim(self, instance):
@@ -460,7 +473,7 @@ class MainApp(App):
             dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
 
     #Starts a new simulation or continues one if it is already running
-    def b_create_instance(self, instance):
+    def createInstance(self, instance):
         self.graph_id = instance.choosePatient(instance)
         #Checks if there is already a simulation running
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == True:
@@ -476,7 +489,7 @@ class MainApp(App):
     #Terminates the simulation
     def terminate(self, instance):
         pendingEvents = 0
-        events_json = get_enabled_events(self.graph_id, self.simulation_id, (self.username.text, self.password.text))
+        events_json = getEnabledEvents(self.graph_id, self.simulation_id, (self.username.text, self.password.text))
 
         events = []
         # distinguish between one and multiple events
@@ -539,10 +552,5 @@ class MainApp(App):
     
 
 if __name__ == '__main__':
-    global start_reload_events
-    start_reload_events = None
-    global start_reload_notes
-    start_reload_notes = None
-
     mainApp = MainApp()
     MainApp().run()

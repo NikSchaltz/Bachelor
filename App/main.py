@@ -16,11 +16,15 @@ from mysql.connector import errorcode
 from datetime import date, datetime
 import re
 import hashlib
+import time
 
 
 
-global userRole
 userRole = ""
+
+scheduledReloads = []
+
+
 
 login = {
     'host': "bachelor-adit-nikolaj.mysql.database.azure.com",
@@ -101,19 +105,16 @@ def createButtonsOfEnabledEvents(
     # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
     start_reload_events = lambda dt: createButtonsOfEnabledEvents(graph_id, sim_id, auth, button_layout)
     Clock.schedule_once(start_reload_events, 5)
+    global scheduledReloads
+    scheduledReloads.append(start_reload_events)
 
 
 
-def stopReloadEvents():
-    global start_reload_events
-    if start_reload_events:
-        Clock.unschedule(start_reload_events)
-
-def stopReloadNotes():
-    global start_reload_notes
-    if start_reload_notes:
-        Clock.unschedule(start_reload_notes)
-
+def stopReloads():
+    global scheduledReloads
+    for reload in scheduledReloads:
+        Clock.unschedule(reload)
+    scheduledReloads = []
 
 #Connects to the database and runs a query
 def dbQuery(query, statement=None):
@@ -226,7 +227,7 @@ class MainApp(App):
         self.top_bar.add_widget(self.terminate_sim)
 
         """ self.stop_reload_events = Button(text="Stop reload")
-        self.stop_reload_events.bind(on_press=lambda instance: stopReloadEvents())
+        self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
         self.top_bar.add_widget(self.stop_reload_events) """
 
         #Adds the buttons to the topbar
@@ -313,6 +314,8 @@ class MainApp(App):
         # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
         start_reload_notes = lambda dt: self.showNotesScreen(instance)
         Clock.schedule_once(start_reload_notes, 5)
+        global scheduledReloads
+        scheduledReloads.append(start_reload_notes)
 
 
 
@@ -434,9 +437,8 @@ class MainApp(App):
 
     #Function to clear the screen of widgets
     def cleanScreen(self, instance):
+        stopReloads()
         self.box_lower.clear_widgets()
-        stopReloadEvents()
-        stopReloadNotes()
 
     #Function to start the simulation
     def startSim(self, instance):
@@ -539,10 +541,5 @@ class MainApp(App):
     
 
 if __name__ == '__main__':
-    global start_reload_events
-    start_reload_events = None
-    global start_reload_notes
-    start_reload_notes = None
-
     mainApp = MainApp()
     MainApp().run()
