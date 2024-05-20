@@ -1,7 +1,7 @@
 import hashlib
 
 # Data to be hashed
-data = "trp313@alumni.ku.dk"
+data = "@alumni.ku.dk"
 
 # Creating a hash object using SHA-256 algorithm
 hash_object = hashlib.sha256()
@@ -23,7 +23,9 @@ print("Hashed value:", hashed_data)
 #Natholdet = a25c56aa35c63e9b8bfa8972c8f33097957a8985ccc863d9b1da206e6d154f8c
 #Admin = c1c224b03cd9bc7b6a86d77f5dace40191766c485cd55dc48caf9ac873335d6f
 
-#Bxz911@alumni.ku.dk = 97927c4ecddc4d517037b5d83f2b8e46e68d1da2560bf0c75e26912619888d1f
-#Hjg708@alumni.ku.dk = 619242b2652f336fd0e3b20ddab175535bf986503a4a5c14a0e9efb21bc58195
-#Mhw630@alumni.ku.dk = c6660fabe0670cf8bad3d3b884de1ccf5531431edaefcf7a1e8cb212d5687299
+#bxz911@alumni.ku.dk = ba503eb877b82b0726d94dd6bd5d948e76d58da9f8c0fff9343f1a6b5630a742
+#hjg708@alumni.ku.dk = f2fbc59ba4c7010a79b83a964daa28015ef21ecf27f12faae62da3b211494537
+#mhw630@alumni.ku.dk = 1eb4f018f04e6531be595fe765203383a3e4a146592a258a52d2d8030ca4a3da
 #trp313@alumni.ku.dk = cd3c68d11179c4c2986aee27e8c7d9bd8391daf7d5140c8b070be0c2c0bb9cf6
+
+

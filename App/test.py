@@ -222,10 +222,7 @@ class MainApp(App):
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
-        
-        self.terminate_sim = Button(text="Force terminate")
-        self.terminate_sim.bind(on_press=self.forceTerminate)
-        self.top_bar.add_widget(self.terminate_sim)
+
 
         """ self.stop_reload_events = Button(text="Stop reload")
         self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
@@ -262,7 +259,7 @@ class MainApp(App):
         left = BoxLayout(orientation='vertical')
         right = BoxLayout(orientation='vertical')
         bottom = BoxLayout(orientation='horizontal')
-        run_sim = Button(text="Create Instance")
+        run_sim = Button(text="Login to user")
 
         bottom.add_widget(run_sim)
 
@@ -288,7 +285,7 @@ class MainApp(App):
         #banner = Label(text="Add a new user")
         username_label = Label(text="Email")
         role_label = Label(text="Select Role")
-        username = TextInput(hint_text="Enter email")
+        username = TextInput(hint_text="Enter username", text = "@alumni.ku.dk")
         drop_down_button = Button(text="Select Role")
         logout_button = Button(text="Log out as admin")
         add_user_button = Button(text="Add user")
@@ -361,10 +358,11 @@ class MainApp(App):
         login_check = req.get("https://repository.dcrgraphs.net/api/graphs/")
 
         if login_check.status_code == 200:
-            if dbQuery(f"SELECT Email FROM dcrusers WHERE Role = '{hashData('Admin')}';","one") == hashData(self.username.text):
-                self.adminScreen(self)
-            else:
-                self.choosePatientScreen(self)
+            if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrusers WHERE Email = '{hashData(self.username.text)}';", "one") == True:
+                if dbQuery(f"SELECT Email FROM dcrusers WHERE Role = '{hashData('Admin')}';","one") == hashData(self.username.text):
+                    self.adminScreen(self)
+                else:
+                    self.choosePatientScreen(self)
 
 
 
@@ -442,14 +440,23 @@ class MainApp(App):
         patient_buttons = BoxLayout(orientation='vertical')
 
         patients = dbQuery("SELECT * FROM DCRGraphs;", "all")
-        for patient in patients:
-            pButton = PatientButton(patient[0], patient[1])
+        for id in patients:
+            pButton = PatientButton(id[0], self.getGraphTitle(id[0]))
             pButton.bind(on_press=self.eventsScreen)
             pButton.bind(on_press=self.createInstance)
             pButton.bind(on_press=self.showTopBar)
             patient_buttons.add_widget(pButton)
         
         self.box_lower.add_widget(patient_buttons)
+
+    def getGraphTitle(self, graph_id):
+        req = requests.Session()
+        req.auth = (self.username.text, self.password.text)
+        response = req.get("https://repository.dcrgraphs.net/api/graphs/" + str(graph_id))
+        data = response.text
+        match = re.search(r'dcrgraph title="([^"]+)"', data)  # Match the pattern 'data="<looked for text>"'
+        return(match.group(1).encode('latin1').decode('utf-8'))
+
 
     #Shows the screen where you can write notes
     def writeNotesScreen(self, instance):
@@ -545,7 +552,7 @@ class MainApp(App):
         #Inserts the simulation into the database if it is not already there
         if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == False:
             today = date.today().strftime('%Y-%m-%d')
-            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
+            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', '{today}', 0);")
 
     #Starts a new simulation or continues one if it is already running
     def createInstance(self, instance):
@@ -581,9 +588,6 @@ class MainApp(App):
             dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
             self.cleanScreen(self)
 
-    def forceTerminate(self, instance):          
-        dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
-        self.cleanScreen(self)
 
     def forceTerminateAdmin(self, instance):
         dbQuery("UPDATE DCRprocesses SET IsTerminated = true WHERE IsTerminated = false;")
@@ -612,7 +616,7 @@ class MainApp(App):
         splitEvents = response.text.split("<event ")
         allNotes = []
         for item in splitEvents:
-            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="some_value"'
+            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="<looked for text>"'
             if match:
                 allNotes.append(match.group(1).encode('latin1').decode('utf-8'))  # Ensure proper encoding/decoding
         

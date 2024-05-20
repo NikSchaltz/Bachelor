@@ -16,8 +16,8 @@ from mysql.connector import errorcode
 from datetime import date, datetime
 import re
 import hashlib
-import time
 
+from kivy.graphics import Color, Rectangle
 
 
 userRole = ""
@@ -36,6 +36,7 @@ login = {
     }
 
 
+
 #Hashes a string
 def hashData(data: str):
     hash_object = hashlib.sha256()
@@ -47,7 +48,7 @@ def hashData(data: str):
 
 
 #gets the tasks that are able to be done in the task list at this moment
-def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
+def getEnabledEvents(graph_id: str, sim_id: str, auth: (str, str)):
     
     #Connects to the api
     req = requests.Session()
@@ -69,7 +70,7 @@ def createButtonsOfEnabledEvents(
     auth: (str, str),
     button_layout: BoxLayout):
 
-    events_json = get_enabled_events(graph_id, sim_id, auth)
+    events_json = getEnabledEvents(graph_id, sim_id, auth)
     # cleanup of previous widgets
     button_layout.clear_widgets()
 
@@ -216,15 +217,12 @@ class MainApp(App):
         choose_patient = Button(text ="Vælg patient")
         write_notes = Button(text ="Skriv note")
         see_notes = Button(text ="Se noter")
-        login_button = Button(text ="Log ud")
+        logout_button = Button(text ="Log ud")
         events_button = Button(text ="Events")
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
-        
-        self.terminate_sim = Button(text="Force terminate")
-        self.terminate_sim.bind(on_press=self.forceTerminate)
-        self.top_bar.add_widget(self.terminate_sim)
+
 
         """ self.stop_reload_events = Button(text="Stop reload")
         self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
@@ -235,13 +233,13 @@ class MainApp(App):
         self.top_bar.add_widget(choose_patient)
         self.top_bar.add_widget(see_notes)
         self.top_bar.add_widget(write_notes)
-        self.top_bar.add_widget(login_button)
+        self.top_bar.add_widget(logout_button)
         #Binds the buttons to the functions that they should run when they are pressed
         see_notes.bind(on_press=self.showNotesScreen)
         write_notes.bind(on_press=self.writeNotesScreen)
         choose_patient.bind(on_press=self.choosePatientScreen)
         choose_patient.bind(on_press=self.hideTopBar)
-        login_button.bind(on_press=self.loginScreen)
+        logout_button.bind(on_press=self.loginScreen)
         events_button.bind(on_press=self.eventsScreen)
 
         self.hideTopBar(self)
@@ -261,7 +259,7 @@ class MainApp(App):
         left = BoxLayout(orientation='vertical')
         right = BoxLayout(orientation='vertical')
         bottom = BoxLayout(orientation='horizontal')
-        run_sim = Button(text="Create Instance")
+        run_sim = Button(text="Login to user")
 
         bottom.add_widget(run_sim)
 
@@ -275,15 +273,101 @@ class MainApp(App):
         login_screen_layout.add_widget(login_boxes)
         login_screen_layout.add_widget(bottom)
 
-        #run_sim.bind(on_press=self.b_create_instance)
-        run_sim.bind(on_press=self.choosePatientScreen)
-        #run_sim.bind(on_press=self.showTopBar)
+        #run_sim.bind(on_press=self.choosePatientScreen)
+        run_sim.bind(on_press=self.login)
 
         self.hideTopBar(self)
 
         self.box_lower.add_widget(login_screen_layout)
 
-    
+    def adminScreen(self, instance):
+        self.cleanScreen(self)
+        #banner = Label(text="Add a new user")
+        username_label = Label(text="Email")
+        role_label = Label(text="Select Role")
+        username = TextInput(hint_text="Enter username", text = "@alumni.ku.dk")
+        drop_down_button = Button(text="Select Role")
+        logout_button = Button(text="Log out as admin")
+        add_user_button = Button(text="Add user")
+        terminate_all_sims = Button(text="Terminate all graphs")
+        remove_all_users_button = Button(text="Remove all users")
+
+        logout_button.bind(on_press=self.loginScreen)
+        terminate_all_sims.bind(on_press=self.forceTerminateAdmin)
+        remove_all_users_button.bind(on_press=lambda instance: dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'"))
+        add_user_button.bind(on_press=lambda instance: self.addUser(instance, username.text, drop_down_button.text))
+
+
+        #Allows changing the background color of the banner
+        """ banner = Button(text="Add a new user", disabled_color=(0, 0, 0, 1), height=800)  # Adjust height as needed
+        #banner.bind(width=lambda instance, value: setattr(instance, 'text_size', (value - 20, None)))  # Adjust text_size
+        banner.background_disabled_normal = 'images/lightGrey.png'  # Set background color
+        banner.disabled = True  # Disable the button
+        banner.opacity = 1  # Adjust opacity to visually indicate disabled state """
+
+
+        # Add the dropdown roles to the dropdown menu
+        drop_down = DropDown()
+        roles = ['Dagholdet', 'Aftenholdet', 'Natholdet', 'Admin']
+        for role in roles:
+            btn = Button(text=role, size_hint_y=None, height=100)
+            btn.bind(on_release=lambda btn: drop_down.select(btn.text))
+            drop_down.add_widget(btn)
+
+        # Bind the selected option to the dropdown button text
+        drop_down.bind(on_select=lambda instance, x: setattr(drop_down_button, 'text', x))
+        drop_down_button.bind(on_release=drop_down.open)
+        
+        admin_screen_layout = BoxLayout(orientation='vertical')
+        #add_user_layout = BoxLayout(orientation='vertical')
+        add_user_layout_top = BoxLayout(orientation='horizontal')
+        add_user_layout_bottom = BoxLayout(orientation='horizontal')
+        terminate_remove_all_users_layout = BoxLayout(orientation='horizontal')
+
+        #Creates the layout for the add user part
+        add_user_layout_top.add_widget(username_label)
+        add_user_layout_top.add_widget(username)
+        add_user_layout_bottom.add_widget(role_label)
+        add_user_layout_bottom.add_widget(drop_down_button)
+        
+        #Creates the layout for the terminate and remove all users buttons
+        terminate_remove_all_users_layout.add_widget(terminate_all_sims)
+        terminate_remove_all_users_layout.add_widget(remove_all_users_button)
+
+        #Creates the layout for the admin screen
+        admin_screen_layout.add_widget(logout_button)
+        #admin_screen_layout.add_widget(banner)
+        admin_screen_layout.add_widget(add_user_layout_top)
+        admin_screen_layout.add_widget(add_user_layout_bottom)
+        #admin_screen_layout.add_widget(add_user_layout)
+        admin_screen_layout.add_widget(add_user_button)
+        admin_screen_layout.add_widget(terminate_remove_all_users_layout)
+
+        #Adds it to the app layout
+        self.box_lower.add_widget(admin_screen_layout)
+
+    def addUser(self, instance, email, role):
+        if role != "Select Role":
+            if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{hashData(email)}';", "one") == False:
+                dbQuery(f"INSERT INTO dcrusers (Email, Role) VALUES ('{hashData(email)}', '{hashData(role)}');")
+        return True
+
+    def login(self, instance):
+        req = requests.Session()
+        req.auth = (self.username.text, self.password.text)
+        login_check = req.get("https://repository.dcrgraphs.net/api/graphs/")
+
+        if login_check.status_code == 200:
+            if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrusers WHERE Email = '{hashData(self.username.text)}';", "one") == True:
+                if dbQuery(f"SELECT Email FROM dcrusers WHERE Role = '{hashData('Admin')}';","one") == hashData(self.username.text):
+                    self.adminScreen(self)
+                else:
+                    self.choosePatientScreen(self)
+
+
+
+
+
     #Function to hide the topbar    
     def hideTopBar(self, instance):
         self.top_bar.disabled = True
@@ -356,14 +440,23 @@ class MainApp(App):
         patient_buttons = BoxLayout(orientation='vertical')
 
         patients = dbQuery("SELECT * FROM DCRGraphs;", "all")
-        for patient in patients:
-            pButton = PatientButton(patient[0], patient[1])
+        for id in patients:
+            pButton = PatientButton(id[0], self.getGraphTitle(id[0]))
             pButton.bind(on_press=self.eventsScreen)
-            pButton.bind(on_press=self.b_create_instance)
+            pButton.bind(on_press=self.createInstance)
             pButton.bind(on_press=self.showTopBar)
             patient_buttons.add_widget(pButton)
         
         self.box_lower.add_widget(patient_buttons)
+
+    def getGraphTitle(self, graph_id):
+        req = requests.Session()
+        req.auth = (self.username.text, self.password.text)
+        response = req.get("https://repository.dcrgraphs.net/api/graphs/" + str(graph_id))
+        data = response.text
+        match = re.search(r'dcrgraph title="([^"]+)"', data)  # Match the pattern 'data="<looked for text>"'
+        return(match.group(1).encode('latin1').decode('utf-8'))
+
 
     #Shows the screen where you can write notes
     def writeNotesScreen(self, instance):
@@ -459,10 +552,10 @@ class MainApp(App):
         #Inserts the simulation into the database if it is not already there
         if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == False:
             today = date.today().strftime('%Y-%m-%d')
-            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, ProcessName, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', 'Task List', '{today}', 0);")
+            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', '{today}', 0);")
 
     #Starts a new simulation or continues one if it is already running
-    def b_create_instance(self, instance):
+    def createInstance(self, instance):
         self.graph_id = instance.choosePatient(instance)
         #Checks if there is already a simulation running
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == True:
@@ -478,7 +571,7 @@ class MainApp(App):
     #Terminates the simulation
     def terminate(self, instance):
         pendingEvents = 0
-        events_json = get_enabled_events(self.graph_id, self.simulation_id, (self.username.text, self.password.text))
+        events_json = getEnabledEvents(self.graph_id, self.simulation_id, (self.username.text, self.password.text))
 
         events = []
         # distinguish between one and multiple events
@@ -495,9 +588,10 @@ class MainApp(App):
             dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
             self.cleanScreen(self)
 
-    def forceTerminate(self, instance):          
-        dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
-        self.cleanScreen(self)
+
+    def forceTerminateAdmin(self, instance):
+        dbQuery("UPDATE DCRprocesses SET IsTerminated = true WHERE IsTerminated = false;")
+    
 
         
     #Uploads the notes to the api, by sending a post request
@@ -522,7 +616,7 @@ class MainApp(App):
         splitEvents = response.text.split("<event ")
         allNotes = []
         for item in splitEvents:
-            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="some_value"'
+            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="<looked for text>"'
             if match:
                 allNotes.append(match.group(1).encode('latin1').decode('utf-8'))  # Ensure proper encoding/decoding
         
