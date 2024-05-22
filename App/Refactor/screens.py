@@ -37,15 +37,12 @@ def loginScreen(app):
     login_screen_layout.add_widget(login_boxes)
     login_screen_layout.add_widget(bottom)
 
-    run_sim.bind(on_press=app.login)
+    run_sim.bind(on_press=app.loginUser)
 
     app.hideTopBar(app)
 
     app.box_lower.add_widget(login_screen_layout)
 
-# def cleanScreen(app):
-#     stopReloads()
-#     app.box_lower.clear_widgets()
 
 def adminScreen(app):
     username_label = Label(text="Email")

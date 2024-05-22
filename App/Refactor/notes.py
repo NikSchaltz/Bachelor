@@ -3,6 +3,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
+from kivy.core.window import Window
 from kivy.uix.dropdown import DropDown
 import requests
 import xmltodict
@@ -11,6 +12,10 @@ import re
 from utilities import hashData
 from datetime import datetime
 from config import login, userRole, scheduledReloads
+
+# Configure logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 
 def createNotesFields(app, string, button_num):
@@ -26,7 +31,6 @@ def createNotesFields(app, string, button_num):
     return button
 
 def showNotesLayout(app, strings):
-    strings = strings if strings else []
     string_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
     string_layout.bind(minimum_height=string_layout.setter('height'))  # Set minimum height based on content
 
@@ -39,11 +43,11 @@ def showNotesLayout(app, strings):
         string_layout.add_widget(button)
 
     # Wrap the GridLayout in a ScrollView
-    scroll_view = ScrollView(size_hint=(1, None), size=(app.box.width, app.box.height))
+    scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
     scroll_view.add_widget(string_layout)
     return scroll_view
 
-def getNotes(app, instance=None):
+def getNotes(app):
     url = (f"https://repository.dcrgraphs.net/api/graphs/{app.graph_id}/sims/{app.simulation_id}/")
     auth = (app.username.text, app.password.text)
     req = requests.Session()
@@ -61,25 +65,48 @@ def getNotes(app, instance=None):
 
     return allNotes if allNotes else []
 
-def clearNotesBox(app, instance=None):
+def uploadNote(app, instance=None):
+    url = (f"https://repository.dcrgraphs.net/api/graphs/{app.graph_id}/sims/{app.simulation_id}/events/textbox")
+    auth = (app.username.text, app.password.text)
+    req = requests.Session()
+    req.auth = auth
+    json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {app.selected_activity_notes.text} \n{app.notes_box.text}"}
+
+    req.post(url, json=json)
+
+def clearNotesBox(app):
     app.notes_box.text = ""
 
-def addActivityToNotes(app, instance=None):
-    drop_down = DropDown()
+def addActivityToNotes(app):
+    events_xml = fetchEvents(app)
+    if not events_xml:
+        return None
+    events_json = parseEvents(events_xml)
+    if not events_json:
+        return None
+    return createDropdownElements(app, events_json)
 
+def fetchEvents(app):
     req = requests.Session()
     req.auth = (app.username.text, app.password.text)
     next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
                                     str(app.graph_id) + "/sims/" + app.simulation_id + "/events")
 
-    events_xml = next_activities_response.text
+    if next_activities_response.status_code != 200:
+        logging.error("Failed to fetch events from API")
+        return None
+
+    return next_activities_response.text
+
+def parseEvents(events_xml):
     events_xml_no_quotes = events_xml[1:len(events_xml)-1]
     events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
     events_json = xmltodict.parse(events_xml_clean)
 
-    global userRole
+    return events_json
+
+def createDropdownElements(app, events_json):
     events = []
-    # distinguish between one and multiple events
     if not isinstance(events_json['events']['event'], list):
         events = [events_json['events']['event']]
     else:
@@ -90,13 +117,14 @@ def addActivityToNotes(app, instance=None):
 
     for e in events:
         if hashData(e['@roles']) == userRole:
-            btn = Button(text=e['@label'], size_hint_y=None, height=44) # change to change the height of each button in the dropdown
-            btn.bind(on_release=lambda btn: drop_down.select(btn.text))
+            btn = Button(text=e['@label'], size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn: app.drop_down.select(btn.text))
             layout.add_widget(btn)
 
     scroll_view = ScrollView(size_hint=(1, None), height=800)
     scroll_view.add_widget(layout)
 
+    drop_down = DropDown()
     drop_down.add_widget(scroll_view)
 
     app.selected_activity_notes = Button(text='Generelt')        
@@ -105,12 +133,3 @@ def addActivityToNotes(app, instance=None):
     drop_down.bind(on_select=lambda instance, x: setattr(app.selected_activity_notes, 'text', x))
 
     return app.selected_activity_notes
-
-def uploadNote(app, instance=None):
-    url = (f"https://repository.dcrgraphs.net/api/graphs/{app.graph_id}/sims/{app.simulation_id}/events/textbox")
-    auth = (app.username.text, app.password.text)
-    req = requests.Session()
-    req.auth = auth
-    json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {app.selected_activity_notes.text} \n{app.notes_box.text}"}
-
-    req.post(url, json=json)
