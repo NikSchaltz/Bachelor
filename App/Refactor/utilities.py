@@ -15,6 +15,6 @@ def hashData(data: str):
 #         Clock.unschedule(reload)
 #     scheduledReloads = []
 
-# def cleanScreen(app):
+# def cleanScreen(self):
 #     stopReloads()
-#     app.box_lower.clear_widgets()
+#     self.box_lower.clear_widgets()
