@@ -142,7 +142,7 @@ def dbQuery(query, statement=None):
             cursor.close()
             db.close()
             return result
-        if query.startswith("INSERT") or query.startswith("DELETE") or query.startswith("UPDATE"):
+        if query.startswith("INSERT") or query.startswith("DELETE") or query.startswith("UPDATE") or query.startswith("Truncate"):
             cursor = db.cursor()
             cursor.execute(query)
             db.commit()
@@ -152,9 +152,10 @@ def dbQuery(query, statement=None):
                 print("Inserted into the database")
             elif query.startswith("UPDATE"):
                 print("Updated the database")
-            else:
+            elif query.startswith("DELETE"):
                 print("Deleted from the database")
-
+            elif query.startswith("Truncate"):
+                print("Truncated the database")
 
 
 class SimulationButton(Button):
@@ -222,8 +223,6 @@ class MainApp(App):
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
-
-
         """ self.stop_reload_events = Button(text="Stop reload")
         self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
         self.top_bar.add_widget(self.stop_reload_events) """
@@ -259,7 +258,7 @@ class MainApp(App):
         left = BoxLayout(orientation='vertical')
         right = BoxLayout(orientation='vertical')
         bottom = BoxLayout(orientation='horizontal')
-        run_sim = Button(text="Login to user")
+        run_sim = Button(text="Login")
 
         bottom.add_widget(run_sim)
 
@@ -273,7 +272,6 @@ class MainApp(App):
         login_screen_layout.add_widget(login_boxes)
         login_screen_layout.add_widget(bottom)
 
-        #run_sim.bind(on_press=self.choosePatientScreen)
         run_sim.bind(on_press=self.login)
 
         self.hideTopBar(self)
@@ -294,8 +292,8 @@ class MainApp(App):
 
         logout_button.bind(on_press=self.loginScreen)
         terminate_all_sims.bind(on_press=self.forceTerminateAdmin)
-        remove_all_users_button.bind(on_press=lambda instance: dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'"))
-        add_user_button.bind(on_press=lambda instance: self.addUser(instance, username.text, drop_down_button.text))
+        remove_all_users_button.bind(on_press=lambda instance: self.deleteAllUsers())
+        add_user_button.bind(on_press=lambda instance: self.addUser(username.text, drop_down_button.text))
 
 
         #Allows changing the background color of the banner
@@ -346,11 +344,14 @@ class MainApp(App):
         #Adds it to the app layout
         self.box_lower.add_widget(admin_screen_layout)
 
-    def addUser(self, instance, email, role):
+    def addUser(self, email, role):
         if role != "Select Role":
             if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{hashData(email)}';", "one") == False:
                 dbQuery(f"INSERT INTO dcrusers (Email, Role) VALUES ('{hashData(email)}', '{hashData(role)}');")
         return True
+    
+    def deleteAllUsers(self):
+        dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}';")
 
     def login(self, instance):
         req = requests.Session()
@@ -359,7 +360,7 @@ class MainApp(App):
 
         if login_check.status_code == 200:
             if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrusers WHERE Email = '{hashData(self.username.text)}';", "one") == True:
-                if dbQuery(f"SELECT Email FROM dcrusers WHERE Role = '{hashData('Admin')}';","one") == hashData(self.username.text):
+                if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrusers WHERE Role = '{hashData('Admin')}' AND Email = '{hashData(self.username.text)}';","one") == True:
                     self.adminScreen(self)
                 else:
                     self.choosePatientScreen(self)
@@ -392,7 +393,6 @@ class MainApp(App):
         string_layout = self.showNotesLayout(notes)
         see_notes_layout.add_widget(string_layout)
         self.box_lower.add_widget(see_notes_layout)
-
 
         global start_reload_notes
         # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
@@ -437,21 +437,32 @@ class MainApp(App):
     #Function that shows which patients are available to choose from
     def choosePatientScreen(self, instance):
         self.cleanScreen(self)
+        auth = (self.username.text, self.password.text)
         patient_buttons = BoxLayout(orientation='vertical')
 
         patients = dbQuery("SELECT * FROM DCRGraphs;", "all")
+        allowed_patients = []
+
+        req = requests.Session()
+        req.auth = auth
         for id in patients:
-            pButton = PatientButton(id[0], self.getGraphTitle(id[0]))
+            response = req.get("https://repository.dcrgraphs.net/api/graphs/" + str(id[0]))
+            if response.status_code == 200:
+                allowed_patients.append(id)
+
+        for id in allowed_patients:
+            pButton = PatientButton(id[0], self.getGraphTitle(id[0], auth))
             pButton.bind(on_press=self.eventsScreen)
-            pButton.bind(on_press=self.createInstance)
+            pButton.bind(on_press=self.connectToSim)
             pButton.bind(on_press=self.showTopBar)
             patient_buttons.add_widget(pButton)
         
         self.box_lower.add_widget(patient_buttons)
 
-    def getGraphTitle(self, graph_id):
+
+    def getGraphTitle(self, graph_id, auth):
         req = requests.Session()
-        req.auth = (self.username.text, self.password.text)
+        req.auth = auth
         response = req.get("https://repository.dcrgraphs.net/api/graphs/" + str(graph_id))
         data = response.text
         match = re.search(r'dcrgraph title="([^"]+)"', data)  # Match the pattern 'data="<looked for text>"'
@@ -534,38 +545,33 @@ class MainApp(App):
         self.box_lower.clear_widgets()
 
     #Function to start the simulation
-    def startSim(self, instance):
-        current_auth = (self.username.text, self.password.text)
-
+    def startNewSim(self):
         url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims"
-        auth=current_auth
         req = requests.Session()
-        req.auth = auth
+        req.auth = (self.username.text, self.password.text)
         resp = req.post(url)
         resp_headers = resp.headers
         if resp_headers:
             self.simulation_id = resp_headers['simulationID']
 
         global userRole
-        userRole = self.role()
+        userRole = self.getRole(self.username.text)
 
-        #Inserts the simulation into the database if it is not already there
-        if dbQuery(f"SELECT COUNT(*) FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == False:
-            today = date.today().strftime('%Y-%m-%d')
-            dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', '{today}', 0);")
+        today = date.today().strftime('%Y-%m-%d')
+        dbQuery(f"INSERT INTO DCRProcesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES ('{self.graph_id}' , '{self.simulation_id}', '{today}', 0);")
 
     #Starts a new simulation or continues one if it is already running
-    def createInstance(self, instance):
+    def connectToSim(self, instance):
+
         self.graph_id = instance.choosePatient(instance)
         #Checks if there is already a simulation running
         if dbQuery(f"SELECT COUNT(*) > 0 FROM dcrprocesses WHERE GraphID = {self.graph_id} AND IsTerminated = 0;", "one") == True:
             simID = dbQuery(f"SELECT SimulationID FROM dcrprocesses WHERE IsTerminated = 0 AND GraphId = {self.graph_id};", "one")
             self.simulation_id = str(simID)
             global userRole
-            userRole = self.role()
-            #createButtonsOfEnabledEvents(self.graph_id, self.simulation_id, (self.username.text, self.password.text), self.b_right)
+            userRole = self.getRole(self.username.text)
         else:
-            self.startSim(instance)
+            self.startNewSim()
 
 
     #Terminates the simulation
@@ -629,8 +635,8 @@ class MainApp(App):
         self.notes_box.text = ""
 
     #Gets the role of the user
-    def role(self):
-        return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{hashData(self.username.text)}';", "one")
+    def getRole(self, username):
+        return dbQuery(f"SELECT Role FROM dcrusers WHERE Email = '{hashData(username)}';", "one")
     
     
 
