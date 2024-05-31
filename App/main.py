@@ -72,10 +72,9 @@ def createButtonsOfEnabledEvents(
 
     events_json = getEnabledEvents(graph_id, sim_id, auth)
     # cleanup of previous widgets
-    button_layout.clear_widgets()
+    mainApp.cleanScreen(button_layout)
 
     global userRole
-
     events = []
     # distinguish between one and multiple events
     if not isinstance(events_json['events']['event'], list):
@@ -99,6 +98,8 @@ def createButtonsOfEnabledEvents(
                 s.manipulate_box_layout = button_layout
                 if e.get('@pending') == 'true':
                     s.color = get_color_from_hex("#FFFF00")  # Set text color to yellow for pending events
+                if e.get('@type') == 'Subprocess':
+                    s.color = get_color_from_hex("#70a0ff")
                 button_layout.add_widget(s)
 
     
@@ -215,11 +216,11 @@ class MainApp(App):
     #Creates the topbar and the buttons that are in the topbar
     def topBar(self, instance):
         #Creates the buttons for each of the 5 pages in the app
-        choose_patient = Button(text ="Vælg patient")
-        write_notes = Button(text ="Skriv note")
-        see_notes = Button(text ="Se noter")
+        choose_patient = Button(text ="Vælg beboer")
+        write_notes = Button(text ="Ny note")
+        see_notes = Button(text ="Noter")
         logout_button = Button(text ="Log ud")
-        events_button = Button(text ="Events")
+        events_button = Button(text ="Aktiviteter")
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
@@ -228,8 +229,8 @@ class MainApp(App):
         self.top_bar.add_widget(self.stop_reload_events) """
 
         #Adds the buttons to the topbar
-        self.top_bar.add_widget(events_button)
         self.top_bar.add_widget(choose_patient)
+        self.top_bar.add_widget(events_button)
         self.top_bar.add_widget(see_notes)
         self.top_bar.add_widget(write_notes)
         self.top_bar.add_widget(logout_button)
@@ -248,7 +249,7 @@ class MainApp(App):
 
     #Designs the login screen and shows it
     def loginScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
         self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
         self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
         password_label = Label(text="Password")
@@ -279,13 +280,13 @@ class MainApp(App):
         self.box_lower.add_widget(login_screen_layout)
 
     def adminScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
         #banner = Label(text="Add a new user")
         username_label = Label(text="Email")
         role_label = Label(text="Select Role")
         username = TextInput(hint_text="Enter username", text = "@alumni.ku.dk")
         drop_down_button = Button(text="Select Role")
-        logout_button = Button(text="Log out as admin")
+        logout_button = Button(text="Log out of admin account")
         add_user_button = Button(text="Add user")
         terminate_all_sims = Button(text="Terminate all graphs")
         remove_all_users_button = Button(text="Remove all users")
@@ -381,13 +382,13 @@ class MainApp(App):
 
     #Function to create and show the events screen
     def eventsScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
 
         createButtonsOfEnabledEvents(self.graph_id, self.simulation_id, (self.username.text, self.password.text), self.box_lower)
 
     #Function to show the notes screen
     def showNotesScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
         notes = self.getNotes(instance)
         see_notes_layout = ScrollView()
         string_layout = self.showNotesLayout(notes)
@@ -436,7 +437,7 @@ class MainApp(App):
 
     #Function that shows which patients are available to choose from
     def choosePatientScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
         auth = (self.username.text, self.password.text)
         patient_buttons = BoxLayout(orientation='vertical')
 
@@ -471,7 +472,7 @@ class MainApp(App):
 
     #Shows the screen where you can write notes
     def writeNotesScreen(self, instance):
-        self.cleanScreen(self)
+        self.cleanScreen(self.box_lower)
         self.notes_box = TextInput(hint_text="Enter notes")
         drop_down_label = Label(text="Vælg aktivitet")
 
@@ -540,9 +541,9 @@ class MainApp(App):
 
 
     #Function to clear the screen of widgets
-    def cleanScreen(self, instance):
+    def cleanScreen(self, layout:BoxLayout):
         stopReloads()
-        self.box_lower.clear_widgets()
+        layout.clear_widgets()
 
     #Function to start the simulation
     def startNewSim(self):
@@ -592,7 +593,7 @@ class MainApp(App):
 
         if pendingEvents == 0:
             dbQuery(f"UPDATE DCRprocesses SET IsTerminated = true WHERE SimulationID = {self.simulation_id};")
-            self.cleanScreen(self)
+            self.cleanScreen(self.box_lower)
 
 
     def forceTerminateAdmin(self, instance):
@@ -607,7 +608,7 @@ class MainApp(App):
         auth=(self.username.text, self.password.text)
         req = requests.Session()
         req.auth = auth
-        json = {"dataXML": f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} \nAktivitet: {self.selected_activity_notes.text} \n{self.notes_box.text}"}
+        json = {"dataXML": f"Date/time: {datetime.now().strftime('%Y-%m-%d %H:%M')}\nNoteret af: {self.username.text} \nAktivitet: {self.selected_activity_notes.text} \n{self.notes_box.text}"}
 
         req.post(url, json = json)
 
