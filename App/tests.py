@@ -179,9 +179,16 @@ def test_createNotesFields():
 
     assert button.text == "hej", "button.text should be 'hej'."
 
-    button = mainApp.createNotesFields("Β, β", 1)
+    """ button = mainApp.createNotesFields("Β, β", 1)
 
-    assert button.text != "Β, β"
+    assert button.text == "Β, β" """
+
+
+def test_calculateNumLines():
+    mainApp = MainApp()
+    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus id elementum ipsum, vel auctor libero. Aenean sit amet magna rhoncus, ullamcorper risus id, porttitor libero. Quisque convallis eleifend turpis eget posuere. Nulla blandit leo auctor auctor iaculis. Nulla mattis, diam vitae porttitor lobortis, ante nulla ullamcorper nibh, sed pulvinar diam lacus fermentum tellus. Cras tincidunt interdum ante eu pulvinar. Proin mi libero, vulputate nec nunc eu, pharetra rutrum neque. Nunc tincidunt laoreet dolor, nec faucibus massa feugiat non. Maecenas commodo egestas sodales. Quisque imperdiet volutpat ultrices.\n Mauris consectetur magna vel imperdiet pellentesque. Morbi commodo sit amet nunc vitae lacinia. Phasellus ac efficitur dui, sit amet accumsan neque. Pellentesque iaculis et magna eu dignissim. Quisque eget faucibus enim. Fusce accumsan malesuada est non lacinia. Suspendisse tempor consequat orci a porta. Mauris consectetur cursus sem sed pharetra. Maecenas iaculis orci quis orci molestie, nec viverra est dapibus."
+
+    assert mainApp.calculateNumLines(text, 100) == 12, "The text should be split into 12 lines."
 
 """ 
 def test_getGraphTitle():

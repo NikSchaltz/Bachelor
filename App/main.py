@@ -174,10 +174,10 @@ class SimulationButton(Button):
         self.username = username
         self.password = password
         self.manipulate_box_layout: BoxLayout = BoxLayout()
-        self.bind(on_press=self.execute_event)
+        self.bind(on_press=self.executeEvent)
 
     #When the button is pressed, it will execute the event, which means accessing the api to execute the event
-    def execute_event(self, instance):
+    def executeEvent(self, instance):
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/{self.event_id}")
         auth=(self.username, self.password)
         req = requests.Session()
@@ -216,11 +216,11 @@ class MainApp(App):
     #Creates the topbar and the buttons that are in the topbar
     def topBar(self, instance):
         #Creates the buttons for each of the 5 pages in the app
-        choose_patient = Button(text ="Vælg beboer")
-        write_notes = Button(text ="Ny note")
-        see_notes = Button(text ="Noter")
-        logout_button = Button(text ="Log ud")
-        events_button = Button(text ="Aktiviteter")
+        choose_patient = Button(text ="Vælg beboer", font_size=36)
+        write_notes = Button(text ="Ny note", font_size=36)
+        see_notes = Button(text ="Noter", font_size=36)
+        logout_button = Button(text ="Log ud", font_size=36)
+        events_button = Button(text ="Aktiviteter", font_size=36)
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
@@ -354,6 +354,8 @@ class MainApp(App):
     def deleteAllUsers(self):
         dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}';")
 
+    
+
     def login(self, instance):
         req = requests.Session()
         req.auth = (self.username.text, self.password.text)
@@ -398,7 +400,7 @@ class MainApp(App):
         global start_reload_notes
         # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
         start_reload_notes = lambda dt: self.showNotesScreen(instance)
-        Clock.schedule_once(start_reload_notes, 5)
+        Clock.schedule_once(start_reload_notes, 50)
         global scheduledReloads
         scheduledReloads.append(start_reload_notes)
 
@@ -417,7 +419,35 @@ class MainApp(App):
         button.opacity = 1  # Adjust opacity to visually indicate disabled state
         return button
 
-    #Function to create the layout for the notes
+
+
+    def calculateNumLines(self, text, max_chars_per_line):
+        # Split the text into lines based on existing newlines
+        lines = text.split('\n')
+        num_lines = 0
+        for line in lines:
+            # Calculate how many lines the current line would take if wrapped at max_chars_per_line
+            num_lines += (len(line) // max_chars_per_line) + 1
+        return num_lines
+
+    def showNotesLayout(self, strings):
+        string_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
+        string_layout.bind(minimum_height=string_layout.setter('height'))  # Set minimum height based on content
+
+        for i in range(len(strings)):
+            button = self.createNotesFields(strings[i], i)
+            button.size_hint_y = None  # Disable size hint along the y-axis
+            num_lines = self.calculateNumLines(strings[i], 50)
+            line_height = button.font_size + 5  # Change this line or num_lines + number to change how big a note button can be
+            button.height = max(100, num_lines * line_height + 50)
+            string_layout.add_widget(button)
+
+        # Wrap the GridLayout in a ScrollView
+        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        scroll_view.add_widget(string_layout)
+        return scroll_view
+
+    """ #Function to create the layout for the notes
     def showNotesLayout(self, strings):
         string_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
         string_layout.bind(minimum_height=string_layout.setter('height'))  # Set minimum height based on content
@@ -433,7 +463,7 @@ class MainApp(App):
         # Wrap the GridLayout in a ScrollView
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         scroll_view.add_widget(string_layout)
-        return scroll_view
+        return scroll_view """
 
     #Function that shows which patients are available to choose from
     def choosePatientScreen(self, instance):
@@ -604,13 +634,14 @@ class MainApp(App):
     #Uploads the notes to the api, by sending a post request
     def uploadNote(self, instance):
         #lav et if statement der tjekker om der er skrevet noget i notesBox
-        url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/textbox")
-        auth=(self.username.text, self.password.text)
-        req = requests.Session()
-        req.auth = auth
-        json = {"dataXML": f"Date/time: {datetime.now().strftime('%Y-%m-%d %H:%M')}\nNoteret af: {self.username.text} \nAktivitet: {self.selected_activity_notes.text} \n{self.notes_box.text}"}
+        if self.notes_box.text != "":
+            url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/textbox")
+            auth=(self.username.text, self.password.text)
+            req = requests.Session()
+            req.auth = auth
+            json = {"dataXML": f"Date/time: {datetime.now().strftime('%Y-%m-%d %H:%M')}\nNoteret af: {self.username.text} \nAktivitet: {self.selected_activity_notes.text} \n{self.notes_box.text}"}
 
-        req.post(url, json = json)
+            req.post(url, json = json)
 
     #Gets the notes from the api
     def getNotes(self, instance):
