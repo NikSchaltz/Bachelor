@@ -156,10 +156,18 @@ def test_addUser():
     expected_result = (hashData('HCW1'), hashData('dagsholdet'))
 
     assert result == [expected_result], "Trying to add the same user again shouldn't add the user again."
+    
+    #Resetting dcrUsers
+    dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'")
+
+
 
 
 def test_deleteAllUsers():
     mainApp = MainApp()
+
+    dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'")
+
     #adding a user
     mainApp.addUser("deleteUserTest", "dagsholdet")
 
@@ -169,8 +177,7 @@ def test_deleteAllUsers():
 
     mainApp.deleteAllUsers()
 
-    assert dbQuery(f"SELECT Count(*) FROM dcrusers WHERE Role != '{hashData('Admin')}'", "one") == 0, "There should be 0 users in the database."
-     """
+    assert dbQuery(f"SELECT Count(*) FROM dcrusers WHERE Role != '{hashData('Admin')}'", "one") == 0, "There should be 0 users in the database that doesnt have the admin role."
 
 def test_createNotesFields():
     mainApp = MainApp()
@@ -179,9 +186,6 @@ def test_createNotesFields():
 
     assert button.text == "hej", "button.text should be 'hej'."
 
-    """ button = mainApp.createNotesFields("Β, β", 1)
-
-    assert button.text == "Β, β" """
 
 
 def test_calculateNumLines():
@@ -190,11 +194,9 @@ def test_calculateNumLines():
 
     assert mainApp.calculateNumLines(text, 100) == 12, "The text should be split into 12 lines."
 
-""" 
 def test_getGraphTitle():
     mainApp = MainApp()
 
-    
     auth = ("bxz911@alumni.ku.dk", "cloud123")
 
     title = mainApp.getGraphTitle(1706803, auth)
@@ -203,44 +205,42 @@ def test_getGraphTitle():
 
     assert title != "Borger B", "title should not be 'Borger B'."
 
-
-
 def test_forceTerminateAdmin():
     mainApp = MainApp()
-
+    #Resets the dcrprocesses table by removing all data, and checks that it is empty
     dbQuery("Truncate dcrprocesses;")
+    assert dbQuery("SELECT * FROM dcrprocesses", "all") == [], "The dcrprocesses table should be empty."
 
+    #Create two processes that will be terminated
     dbQuery("INSERT INTO dcrprocesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES (123, 456, '2024-05-23', 0)")
     dbQuery("INSERT INTO dcrprocesses (GraphID, SimulationID, CreatedDate, IsTerminated) VALUES (111, 222, '2024-05-23', 0)")
 
+    #Checks that the two processes has been added and arent terminated
     result = dbQuery("SELECT GraphID FROM dcrprocesses WHERE IsTerminated = 0", "all")
-
     expected_result = [(111,), (123,)]
-    print(result)
-
     assert result == expected_result, "The 2 inserted processes should not be terminated."
 
+    #Force terminates all processes by calling the function that will be tested
     mainApp.forceTerminateAdmin(mainApp)
 
+    #Checks that the two processes has been terminated
     result = dbQuery("SELECT GraphID FROM dcrprocesses WHERE IsTerminated = 0", "all")
-
     assert result == [], "All processes should be terminated."
 
+    #Resets the dcrprocesses table by removing all data
     dbQuery("Truncate dcrprocesses;")
-
 
 
 def test_getRole():
     mainApp = MainApp()
+    #reset the table for this test
     mainApp.deleteAllUsers()
-    #dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'")
     dbQuery(f"INSERT INTO dcrusers (Email, Role) VALUES ('{hashData('HCW1')}', '{hashData('dagsholdet')}')")
 
     assert mainApp.getRole("HCW1") == hashData('dagsholdet'), "Role should be 'dagsholdet'."
-    dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}'")
-
-
-
+    
+    #Reset the table
+    mainApp.deleteAllUsers()
 
  """
 

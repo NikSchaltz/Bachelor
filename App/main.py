@@ -53,11 +53,11 @@ def getEnabledEvents(graph_id: str, sim_id: str, auth: (str, str)):
     #Connects to the api
     req = requests.Session()
     req.auth = auth
-    next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
+    response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
                                     str(graph_id) + "/sims/" + sim_id + "/events?filter=only-enabled")
 
     #Reformats the xml to json  
-    events_xml = next_activities_response.text
+    events_xml = response.text
     events_xml_no_quotes = events_xml[1:len(events_xml)-1]
     events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
     events_json = xmltodict.parse(events_xml_clean)
@@ -143,7 +143,7 @@ def dbQuery(query, statement=None):
             cursor.close()
             db.close()
             return result
-        if query.startswith("INSERT") or query.startswith("DELETE") or query.startswith("UPDATE") or query.startswith("Truncate"):
+        else:
             cursor = db.cursor()
             cursor.execute(query)
             db.commit()
@@ -259,7 +259,7 @@ class MainApp(App):
         left = BoxLayout(orientation='vertical')
         right = BoxLayout(orientation='vertical')
         bottom = BoxLayout(orientation='horizontal')
-        run_sim = Button(text="Login")
+        run_sim = Button(text="Log ind")
 
         bottom.add_widget(run_sim)
 
@@ -282,28 +282,19 @@ class MainApp(App):
     def adminScreen(self, instance):
         self.cleanScreen(self.box_lower)
         #banner = Label(text="Add a new user")
-        username_label = Label(text="Email")
-        role_label = Label(text="Select Role")
-        username = TextInput(hint_text="Enter username", text = "@alumni.ku.dk")
-        drop_down_button = Button(text="Select Role")
-        logout_button = Button(text="Log out of admin account")
-        add_user_button = Button(text="Add user")
-        terminate_all_sims = Button(text="Terminate all graphs")
-        remove_all_users_button = Button(text="Remove all users")
+        username_label = Label(text="Username")
+        role_label = Label(text="Vælg rolle")
+        username = TextInput(hint_text="Skriv username", text = "@alumni.ku.dk")
+        drop_down_button = Button(text="Vælg rolle")
+        logout_button = Button(text="Log ud af admin konto")
+        add_user_button = Button(text="Tilføj bruger")
+        terminate_all_sims = Button(text="Afslut alle grafer")
+        remove_all_users_button = Button(text="Fjern alle brugere")
 
         logout_button.bind(on_press=self.loginScreen)
         terminate_all_sims.bind(on_press=self.forceTerminateAdmin)
         remove_all_users_button.bind(on_press=lambda instance: self.deleteAllUsers())
         add_user_button.bind(on_press=lambda instance: self.addUser(username.text, drop_down_button.text))
-
-
-        #Allows changing the background color of the banner
-        """ banner = Button(text="Add a new user", disabled_color=(0, 0, 0, 1), height=800)  # Adjust height as needed
-        #banner.bind(width=lambda instance, value: setattr(instance, 'text_size', (value - 20, None)))  # Adjust text_size
-        banner.background_disabled_normal = 'images/lightGrey.png'  # Set background color
-        banner.disabled = True  # Disable the button
-        banner.opacity = 1  # Adjust opacity to visually indicate disabled state """
-
 
         # Add the dropdown roles to the dropdown menu
         drop_down = DropDown()
@@ -345,12 +336,14 @@ class MainApp(App):
         #Adds it to the app layout
         self.box_lower.add_widget(admin_screen_layout)
 
+    #Adds a user to the database
     def addUser(self, email, role):
         if role != "Select Role":
             if dbQuery(f"SELECT COUNT(*) FROM dcrusers WHERE Email = '{hashData(email)}';", "one") == False:
                 dbQuery(f"INSERT INTO dcrusers (Email, Role) VALUES ('{hashData(email)}', '{hashData(role)}');")
         return True
-    
+
+    #Deletes all users from dcrusers that does not have the admin role
     def deleteAllUsers(self):
         dbQuery(f"DELETE FROM dcrusers WHERE Role != '{hashData('Admin')}';")
 
@@ -532,10 +525,10 @@ class MainApp(App):
 
         req = requests.Session()
         req.auth = (self.username.text, self.password.text)
-        next_activities_response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
+        response = req.get("https://repository.dcrgraphs.net/api/graphs/" + 
                                         str(self.graph_id) + "/sims/" + self.simulation_id + "/events")
 
-        events_xml = next_activities_response.text
+        events_xml = response.text
         events_xml_no_quotes = events_xml[1:len(events_xml)-1]
         events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
         events_json = xmltodict.parse(events_xml_clean)
