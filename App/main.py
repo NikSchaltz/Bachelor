@@ -250,10 +250,10 @@ class MainApp(App):
     #Designs the login screen and shows it
     def loginScreen(self, instance):
         self.cleanScreen(self.box_lower)
-        self.password = TextInput(hint_text="Enter password", password=True, text = "cloud123")
-        self.username = TextInput(hint_text="Enter username", text = "bxz911@alumni.ku.dk")
-        password_label = Label(text="Password")
-        username_label = Label(text="Username")
+        self.password = TextInput(hint_text="Skriv adgangskode", password=True, text = "cloud123")
+        self.username = TextInput(hint_text="Skriv brugernavn", text = "bxz911@alumni.ku.dk")
+        password_label = Label(text="Adgangskode")
+        username_label = Label(text="Brugernavn")
         login_screen_layout = BoxLayout(orientation='vertical')
         login_boxes = BoxLayout(orientation='horizontal')
         left = BoxLayout(orientation='vertical')
@@ -282,9 +282,9 @@ class MainApp(App):
     def adminScreen(self, instance):
         self.cleanScreen(self.box_lower)
         #banner = Label(text="Add a new user")
-        username_label = Label(text="Username")
+        username_label = Label(text="Brugernavn")
         role_label = Label(text="Vælg rolle")
-        username = TextInput(hint_text="Skriv username", text = "@alumni.ku.dk")
+        username = TextInput(hint_text="Skriv brugernavn", text = "@alumni.ku.dk")
         drop_down_button = Button(text="Vælg rolle")
         logout_button = Button(text="Log ud af admin konto")
         add_user_button = Button(text="Tilføj bruger")
@@ -496,13 +496,13 @@ class MainApp(App):
     #Shows the screen where you can write notes
     def writeNotesScreen(self, instance):
         self.cleanScreen(self.box_lower)
-        self.notes_box = TextInput(hint_text="Enter notes")
+        self.notes_box = TextInput(hint_text="Skriv note her")
         drop_down_label = Label(text="Vælg aktivitet")
 
         upload_notes_layout = BoxLayout(orientation='vertical')
         upload_notes_layout_drop_down = BoxLayout(orientation='vertical')
         upload_notes_layout_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
-        upload_notes = Button(text="Upload notes")
+        upload_notes = Button(text="Opret note")
 
         
         upload_notes.bind(on_press=self.clearNotesBox)
