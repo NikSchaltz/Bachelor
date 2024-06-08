@@ -24,10 +24,20 @@ def test_hashData():
     assert hashData(input_7) == hashData(input_8), "Hashing special characters should return the same hash."
 
 
-
 def test_getEnabledEvents():
-    #kan ikke laves før alle grafer er færdige
-    return True
+
+    events_json = getEnabledEvents("1706803", "2014045", ("bxz911@alumni.ku.dk", "cloud123"))
+
+    events = events_json['events']['event']
+
+    lst = []
+    for e in events:
+        lst.append(e['@label'])
+
+    expected_events = ['Morgenpleje', 'Textbox']
+
+    assert lst == expected_events
+    
 
 
 def add_one(dt):

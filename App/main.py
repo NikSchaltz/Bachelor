@@ -103,12 +103,11 @@ def createButtonsOfEnabledEvents(
                 button_layout.add_widget(s)
 
     
-    global start_reload_events
     # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
-    start_reload_events = lambda dt: createButtonsOfEnabledEvents(graph_id, sim_id, auth, button_layout)
-    Clock.schedule_once(start_reload_events, 5)
+    reload_task = lambda dt: createButtonsOfEnabledEvents(graph_id, sim_id, auth, button_layout)
+    Clock.schedule_once(reload_task, 5)
     global scheduledReloads
-    scheduledReloads.append(start_reload_events)
+    scheduledReloads.append(reload_task)
 
 
 
@@ -117,6 +116,7 @@ def stopReloads():
     for reload in scheduledReloads:
         Clock.unschedule(reload)
     scheduledReloads = []
+
 
 #Connects to the database and runs a query
 def dbQuery(query, statement=None):
@@ -224,9 +224,6 @@ class MainApp(App):
 
         self.top_bar = BoxLayout(orientation='horizontal', size_hint=(1, 0.05))
 
-        """ self.stop_reload_events = Button(text="Stop reload")
-        self.stop_reload_events.bind(on_press=lambda instance: stopReloads())
-        self.top_bar.add_widget(self.stop_reload_events) """
 
         #Adds the buttons to the topbar
         self.top_bar.add_widget(choose_patient)
@@ -298,7 +295,7 @@ class MainApp(App):
 
         # Add the dropdown roles to the dropdown menu
         drop_down = DropDown()
-        roles = ['Dagholdet', 'Aftenholdet', 'Natholdet', 'Admin']
+        roles = ['Dagholdet', 'Aftenholdet', 'Natholdet']
         for role in roles:
             btn = Button(text=role, size_hint_y=None, height=100)
             btn.bind(on_release=lambda btn: drop_down.select(btn.text))
@@ -390,12 +387,11 @@ class MainApp(App):
         see_notes_layout.add_widget(string_layout)
         self.box_lower.add_widget(see_notes_layout)
 
-        global start_reload_notes
         # Schedule the next call to createButtonsOfEnabledEvents after 5 seconds
-        start_reload_notes = lambda dt: self.showNotesScreen(instance)
-        Clock.schedule_once(start_reload_notes, 50)
+        reload_note = lambda dt: self.showNotesScreen(instance)
+        Clock.schedule_once(reload_note, 60)
         global scheduledReloads
-        scheduledReloads.append(start_reload_notes)
+        scheduledReloads.append(reload_note)
 
 
 
@@ -440,23 +436,6 @@ class MainApp(App):
         scroll_view.add_widget(string_layout)
         return scroll_view
 
-    """ #Function to create the layout for the notes
-    def showNotesLayout(self, strings):
-        string_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
-        string_layout.bind(minimum_height=string_layout.setter('height'))  # Set minimum height based on content
-
-        for i in range(len(strings)):
-            button = self.createNotesFields(strings[i], i)
-            button.size_hint_y = None  # Disable size hint along the y-axis
-            num_lines = strings[i].count('\n') + 1
-            line_height = button.font_size + 5  # Change this line or num_lines + number to change how big a note button can be
-            button.height = max(100, num_lines * line_height + 50)
-            string_layout.add_widget(button)
-
-        # Wrap the GridLayout in a ScrollView
-        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        scroll_view.add_widget(string_layout)
-        return scroll_view """
 
     #Function that shows which patients are available to choose from
     def choosePatientScreen(self, instance):
@@ -626,7 +605,6 @@ class MainApp(App):
         
     #Uploads the notes to the api, by sending a post request
     def uploadNote(self, instance):
-        #lav et if statement der tjekker om der er skrevet noget i notesBox
         if self.notes_box.text != "":
             url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/textbox")
             auth=(self.username.text, self.password.text)
@@ -646,13 +624,13 @@ class MainApp(App):
         
         splitEvents = response.text.split("<event ")
         allNotes = []
-        for item in splitEvents:
-            match = re.search(r'data="([^"]+)"', item)  # Match the pattern 'data="<looked for text>"'
+        for event in splitEvents:
+            match = re.search(r'data="([^"]+)"', event)  # Match the pattern 'data="<looked for text>"'
             if match:
                 allNotes.append(match.group(1).encode('latin1').decode('utf-8'))  # Ensure proper encoding/decoding
         
-        allNotes = [string.replace("&#xA;", "\n") for string in allNotes]
-
+        allNotes = [note.replace("&#xA;", "\n").replace("&amp;", "&").replace("&quot;", '"') for note in allNotes]
+        
         return allNotes
 
     #Clears the notes box
