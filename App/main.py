@@ -278,7 +278,6 @@ class MainApp(App):
 
     def adminScreen(self, instance):
         self.cleanScreen(self.box_lower)
-        #banner = Label(text="Add a new user")
         username_label = Label(text="Brugernavn")
         role_label = Label(text="Vælg rolle")
         username = TextInput(hint_text="Skriv brugernavn", text = "@alumni.ku.dk")
@@ -628,7 +627,7 @@ class MainApp(App):
             match = re.search(r'data="([^"]+)"', event)  # Match the pattern 'data="<looked for text>"'
             if match:
                 allNotes.append(match.group(1).encode('latin1').decode('utf-8'))  # Ensure proper encoding/decoding
-        
+
         allNotes = [note.replace("&#xA;", "\n").replace("&amp;", "&").replace("&quot;", '"') for note in allNotes]
         
         return allNotes
